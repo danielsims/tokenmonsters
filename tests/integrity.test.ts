@@ -56,7 +56,7 @@ describe("Integrity", () => {
   test("verifyMonster fails for tampered stage", () => {
     const monster = makeMockMonster();
     const checksum = signMonster(monster);
-    const tampered = { ...monster, checksum, stage: "elder" as const };
+    const tampered = { ...monster, checksum, stage: "apex" as const };
     expect(verifyMonster(tampered)).toBe(false);
   });
 

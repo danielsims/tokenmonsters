@@ -1,7 +1,7 @@
 import type { Monster, Species, Stage, TokenSource } from "../models/types";
-import { shouldEvolve, getTargetStage } from "../models/evolution";
+import { getTargetStage } from "../models/evolution";
+import { getLevel } from "../models/level";
 import { calculateFeedResult, applyFeed, type FeedResult } from "./feeding";
-import { getSpeciesById } from "../db/queries";
 import { updateMonster, recordTokenFeed, recordEvolution } from "../db/queries";
 
 /** How often the game tick runs (ms) */
@@ -68,8 +68,9 @@ export function feedMonster(
     fedAt: Date.now(),
   });
 
-  // Check evolution
-  const targetStage = getTargetStage(updated.stage, updated.experience, species.evolutionThresholds);
+  // Check evolution using level system
+  const level = getLevel(updated.experience);
+  const targetStage = getTargetStage(updated.stage, level, species);
   let evolved = false;
   let newStage: Stage | undefined;
 
@@ -90,7 +91,7 @@ export function feedMonster(
       fromStage,
       toStage: targetStage,
       evolvedAt: Date.now(),
-      triggerReason: `Fed ${feedResult.totalTokens} tokens from ${source}`,
+      triggerReason: `Reached Lv.${level} after feeding ${feedResult.totalTokens} tokens from ${source}`,
       tokensAtEvolution: updated.experience,
     });
   }

@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { useGame } from "../../game/context";
 import { decodeGenome, getPrimaryGenes, geneToColor, hslToHex } from "../../models/genome";
 import { getEvolutionHistory, getTotalTokensBySource } from "../../db/queries";
+import { getCurrentForm, getDisplayName } from "../../models/evolution";
+import { getLevel } from "../../models/level";
 import { StatusBar } from "../components/StatusBar";
 
 const TRAIT_LABELS: Record<string, string> = {
@@ -33,6 +35,8 @@ export function InfoScreen() {
 
   const primaryColor = hslToHex(geneToColor(traits.primaryColor));
   const secondaryColor = hslToHex(geneToColor(traits.secondaryColor));
+  const displayName = getDisplayName(monster, species);
+  const level = getLevel(monster.experience);
 
   return (
     <box flexDirection="column" width="100%" height="100%">
@@ -46,12 +50,13 @@ export function InfoScreen() {
       >
         <text>
           <strong fg="#ffffff">Monster Info</strong>
-          <span fg="#666688"> - {monster.name ?? "Unnamed"}</span>
+          <span fg="#666688"> - {displayName}</span>
+          <span fg="#ffdd44"> Lv.{level}</span>
         </text>
       </box>
 
       <box flexDirection="row" flexGrow={1}>
-        {/* Left column: Genome */}
+        {/* Left column: Genome + Evolution Line */}
         <box flexGrow={1} flexDirection="column" paddingX={2} paddingY={1}>
           <text fg="#aaaacc">
             <u>Genome Traits</u>
@@ -79,6 +84,20 @@ export function InfoScreen() {
             <text fg="#888888">Secondary: </text>
             <text fg={secondaryColor}>{"\u2588\u2588\u2588\u2588"} {secondaryColor}</text>
           </box>
+          <box height={1} />
+          <text fg="#aaaacc">
+            <u>Evolution Line</u>
+          </text>
+          {species.forms.map((form, i) => {
+            const isCurrent = form.stage === monster.stage;
+            const color = isCurrent ? "#ffdd44" : "#666688";
+            const marker = isCurrent ? ">" : " ";
+            return (
+              <text key={i} fg={color}>
+                {marker} {form.name}{form.evolvesAtLevel !== null ? ` (Lv.${form.evolvesAtLevel})` : " (Final)"}
+              </text>
+            );
+          })}
         </box>
 
         {/* Right column: History + Tokens */}
@@ -107,7 +126,7 @@ export function InfoScreen() {
           <text fg="#aaaacc">
             <u>Details</u>
           </text>
-          <text fg="#888888">Species:   {species.name} ({species.rarity})</text>
+          <text fg="#888888">Species:   {species.id} ({species.rarity})</text>
           <text fg="#888888">Origin:    {monster.origin}</text>
           <text fg="#888888">
             Created: {new Date(monster.createdAt).toLocaleDateString()}

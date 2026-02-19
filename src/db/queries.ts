@@ -7,7 +7,6 @@ import type {
   EvolutionRecord,
   Stage,
   TokenSource,
-  EvolutionThresholds,
 } from "../models/types";
 
 // --- Species ---
@@ -27,12 +26,11 @@ export function getSpeciesById(id: string): Species | null {
 function rowToSpecies(row: any): Species {
   return {
     id: row.id,
-    name: row.name,
     description: row.description,
     rarity: row.rarity,
     baseHungerRate: row.base_hunger_rate,
     baseHappinessRate: row.base_happiness_rate,
-    evolutionThresholds: JSON.parse(row.evolution_thresholds),
+    forms: JSON.parse(row.forms),
   };
 }
 

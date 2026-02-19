@@ -1,69 +1,90 @@
-import type { Monster, Species, Stage, EvolutionThresholds } from "./types";
+import type { Monster, Species, Stage, EvolutionForm } from "./types";
+import { getLevel } from "./level";
 
-const STAGE_ORDER: Stage[] = ["egg", "hatchling", "juvenile", "adult", "elder"];
+const STAGE_ORDER: Stage[] = ["egg", "hatchling", "prime", "apex"];
 
-/** Get the next stage after the current one, or null if at max */
-export function getNextStage(current: Stage): Stage | null {
-  const idx = STAGE_ORDER.indexOf(current);
-  if (idx === -1 || idx >= STAGE_ORDER.length - 1) return null;
-  return STAGE_ORDER[idx + 1];
+/** Get the form data for the monster's current stage */
+export function getCurrentForm(species: Species, stage: Stage): EvolutionForm | null {
+  return species.forms.find((f) => f.stage === stage) ?? null;
 }
 
-/** Check if a monster should evolve based on its XP and species thresholds */
-export function shouldEvolve(monster: Monster, thresholds: EvolutionThresholds): boolean {
-  const next = getNextStage(monster.stage);
-  if (!next) return false;
+/** Get the next form after the current stage, or null if at final form */
+export function getNextForm(species: Species, currentStage: Stage): EvolutionForm | null {
+  const idx = STAGE_ORDER.indexOf(currentStage);
+  if (idx === -1) return null;
 
-  const threshold = thresholds[next as keyof EvolutionThresholds];
-  if (threshold === undefined) return false;
-
-  return monster.experience >= threshold;
+  // Find the next form in stage order that exists for this species
+  for (let i = idx + 1; i < STAGE_ORDER.length; i++) {
+    const form = species.forms.find((f) => f.stage === STAGE_ORDER[i]);
+    if (form) return form;
+  }
+  return null;
 }
 
-/** Get the target stage for a given XP amount (may skip stages if enough XP) */
+/** Check if a monster should evolve based on its level and species form thresholds */
+export function shouldEvolve(monster: Monster, species: Species, level: number): boolean {
+  const currentForm = getCurrentForm(species, monster.stage);
+  if (!currentForm || currentForm.evolvesAtLevel === null) return false;
+
+  return level >= currentForm.evolvesAtLevel;
+}
+
+/** Get the target stage for a given level (may skip stages) */
 export function getTargetStage(
   currentStage: Stage,
-  experience: number,
-  thresholds: EvolutionThresholds
+  level: number,
+  species: Species
 ): Stage {
   let stage = currentStage;
-  for (const s of STAGE_ORDER) {
-    if (STAGE_ORDER.indexOf(s) <= STAGE_ORDER.indexOf(currentStage)) continue;
-    const threshold = thresholds[s as keyof EvolutionThresholds];
-    if (threshold !== undefined && experience >= threshold) {
-      stage = s;
+  const currentIdx = STAGE_ORDER.indexOf(currentStage);
+
+  for (let i = currentIdx; i < STAGE_ORDER.length; i++) {
+    const form = species.forms.find((f) => f.stage === STAGE_ORDER[i]);
+    if (!form) continue;
+
+    if (form.evolvesAtLevel !== null && level >= form.evolvesAtLevel) {
+      // Check if there's a next form to evolve into
+      const nextForm = getNextForm(species, STAGE_ORDER[i]);
+      if (nextForm) {
+        stage = nextForm.stage;
+      }
     }
   }
+
   return stage;
 }
 
-/** Get XP required for the next evolution */
-export function getNextThreshold(
-  currentStage: Stage,
-  thresholds: EvolutionThresholds
-): number | null {
-  const next = getNextStage(currentStage);
-  if (!next) return null;
-  return thresholds[next as keyof EvolutionThresholds] ?? null;
+/** Get the display name for a monster */
+export function getDisplayName(monster: Monster, species: Species): string {
+  const form = getCurrentForm(species, monster.stage);
+  const formName = form?.name ?? monster.stage;
+
+  if (monster.name) {
+    return `${monster.name} the ${formName}`;
+  }
+  return formName;
 }
 
-/** Calculate evolution progress as a percentage (0-100) */
-export function getEvolutionProgress(
-  monster: Monster,
-  thresholds: EvolutionThresholds
-): number {
-  const nextThreshold = getNextThreshold(monster.stage, thresholds);
-  if (nextThreshold === null) return 100;
+/** Get evolution progress toward next form as a percentage (0-100) */
+export function getEvolutionProgress(monster: Monster, species: Species): number {
+  const currentForm = getCurrentForm(species, monster.stage);
+  if (!currentForm || currentForm.evolvesAtLevel === null) return 100;
 
-  // Find the current stage's threshold (or 0 for egg)
-  const currentThreshold =
-    monster.stage === "egg"
-      ? 0
-      : thresholds[monster.stage as keyof EvolutionThresholds] ?? 0;
+  const level = getLevel(monster.experience);
+  // Find the level the current form started at
+  const stageIdx = STAGE_ORDER.indexOf(monster.stage);
+  let startLevel = 1;
+  if (stageIdx > 0) {
+    // The previous form's evolvesAtLevel is when this form began
+    const prevForm = species.forms.find((f) => f.stage === STAGE_ORDER[stageIdx - 1]);
+    if (prevForm?.evolvesAtLevel) {
+      startLevel = prevForm.evolvesAtLevel;
+    }
+  }
 
-  const range = nextThreshold - currentThreshold;
+  const range = currentForm.evolvesAtLevel - startLevel;
   if (range <= 0) return 100;
 
-  const progress = ((monster.experience - currentThreshold) / range) * 100;
+  const progress = ((level - startLevel) / range) * 100;
   return Math.min(100, Math.max(0, progress));
 }

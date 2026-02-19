@@ -1,17 +1,9 @@
 import { useState, useEffect } from "react";
 import { useGame } from "../../game/context";
-import type { Stage } from "../../models/types";
-
-const STAGE_NAMES: Record<Stage, string> = {
-  egg: "Egg",
-  hatchling: "Hatchling",
-  juvenile: "Juvenile",
-  adult: "Adult",
-  elder: "Elder",
-};
+import { getCurrentForm } from "../../models/evolution";
 
 export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
-  const { monster } = useGame();
+  const { monster, species } = useGame();
   const [dots, setDots] = useState(0);
   const [complete, setComplete] = useState(false);
 
@@ -32,7 +24,8 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
     };
   }, [onComplete]);
 
-  const stageName = monster?.stage ? STAGE_NAMES[monster.stage] : "???";
+  const form = monster && species ? getCurrentForm(species, monster.stage) : null;
+  const formName = form?.name ?? "???";
   const dotStr = ".".repeat(dots);
 
   return (
@@ -63,7 +56,7 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
           </text>
           <box height={1} />
           <text fg="#ffffff">
-            Your monster evolved to <strong fg="#ffdd44">{stageName}</strong>!
+            Your monster evolved to <strong fg="#ffdd44">{formName}</strong>!
           </text>
         </>
       )}

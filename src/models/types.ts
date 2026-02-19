@@ -1,23 +1,22 @@
 export type Rarity = "common" | "uncommon" | "rare" | "legendary";
-export type Stage = "egg" | "hatchling" | "juvenile" | "adult" | "elder";
+export type Stage = "egg" | "hatchling" | "prime" | "apex";
 export type Origin = "generated" | "gifted";
 export type TokenSource = "claude" | "codex" | "opencode";
 
-export interface EvolutionThresholds {
-  hatchling: number;
-  juvenile: number;
-  adult: number;
-  elder: number;
+export interface EvolutionForm {
+  stage: Stage;
+  name: string;
+  description: string;
+  evolvesAtLevel: number | null; // null = final form
 }
 
 export interface Species {
   id: string;
-  name: string;
   description: string;
   rarity: Rarity;
   baseHungerRate: number;
   baseHappinessRate: number;
-  evolutionThresholds: EvolutionThresholds;
+  forms: EvolutionForm[];
 }
 
 export interface Monster {

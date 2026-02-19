@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useGame } from "../../game/context";
-import { getEvolutionProgress, getNextThreshold } from "../../models/evolution";
+import { getCurrentForm } from "../../models/evolution";
+import { getLevel, getLevelProgress, getXpForNextLevel } from "../../models/level";
 
 function StatBar({
   label,
@@ -38,12 +39,12 @@ export function StatsPanel() {
 
   if (!monster || !species) return null;
 
-  const progress = useMemo(
-    () => getEvolutionProgress(monster, species.evolutionThresholds),
-    [monster.experience, monster.stage, species.evolutionThresholds]
-  );
+  const level = useMemo(() => getLevel(monster.experience), [monster.experience]);
+  const levelProgress = useMemo(() => getLevelProgress(monster.experience), [monster.experience]);
+  const nextLevelXp = useMemo(() => getXpForNextLevel(level), [level]);
+  const currentForm = useMemo(() => getCurrentForm(species, monster.stage), [species, monster.stage]);
 
-  const nextThreshold = getNextThreshold(monster.stage, species.evolutionThresholds);
+  const evolvesAt = currentForm?.evolvesAtLevel;
 
   return (
     <box flexDirection="column" gap={0} paddingX={1}>
@@ -51,21 +52,29 @@ export function StatsPanel() {
       <StatBar label="Happiness" value={monster.happiness} max={100} color="#ff44ff" />
       <StatBar label="Energy" value={monster.energy} max={100} color="#4488ff" />
       <box flexDirection="row" gap={1}>
-        <text fg="#888888">{"XP".padEnd(10)}</text>
+        <text fg="#888888">{"Level".padEnd(10)}</text>
         <text fg="#ffdd44">
-          {monster.experience.toLocaleString()}
-          {nextThreshold ? ` / ${nextThreshold.toLocaleString()}` : " (MAX)"}
+          Lv.{level}
+          {"  "}
+          {"\u2588".repeat(Math.round(levelProgress / 5))}
+          {"\u2591".repeat(20 - Math.round(levelProgress / 5))}
+          {" "}
+          {Math.round(levelProgress)}%
         </text>
       </box>
       <box flexDirection="row" gap={1}>
-        <text fg="#888888">{"Evolution".padEnd(10)}</text>
-        <text fg="#ffdd44">
-          {"\u2588".repeat(Math.round(progress / 5))}
-          {"\u2591".repeat(20 - Math.round(progress / 5))}
-          {" "}
-          {Math.round(progress)}%
+        <text fg="#888888">{"XP".padEnd(10)}</text>
+        <text fg="#aaaacc">
+          {monster.experience.toLocaleString()}
+          {level < 100 ? ` / ${nextLevelXp.toLocaleString()}` : " (MAX)"}
         </text>
       </box>
+      {evolvesAt !== null && evolvesAt !== undefined && (
+        <box flexDirection="row" gap={1}>
+          <text fg="#888888">{"Evolves".padEnd(10)}</text>
+          <text fg="#ff88ff">Lv.{evolvesAt}</text>
+        </box>
+      )}
     </box>
   );
 }

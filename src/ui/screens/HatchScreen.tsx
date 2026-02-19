@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useTimeline } from "@opentui/react";
 import { useGame } from "../../game/context";
+import { getCurrentForm } from "../../models/evolution";
 
 const HATCH_FRAMES = [
   [
@@ -41,7 +41,7 @@ const HATCH_FRAMES = [
 ];
 
 export function HatchScreen({ onComplete }: { onComplete: () => void }) {
-  const { monster } = useGame();
+  const { monster, species } = useGame();
   const [frame, setFrame] = useState(0);
   const [showMessage, setShowMessage] = useState(false);
 
@@ -62,6 +62,8 @@ export function HatchScreen({ onComplete }: { onComplete: () => void }) {
   }, [onComplete]);
 
   const art = HATCH_FRAMES[frame].join("\n");
+  const form = monster && species ? getCurrentForm(species, monster.stage) : null;
+  const formName = form?.name ?? "new creature";
 
   return (
     <box
@@ -80,7 +82,7 @@ export function HatchScreen({ onComplete }: { onComplete: () => void }) {
             <strong fg="#ffffff">Your egg has hatched!</strong>
           </text>
           <text fg="#aaaacc">
-            A {monster?.name ? `${monster.name}` : "new creature"} has emerged!
+            A <strong fg="#ffdd44">{formName}</strong> has emerged!
           </text>
         </box>
       )}
