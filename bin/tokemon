@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# tokemon — start the daemon in the background and launch the TUI
+
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+BUN="${HOME}/.bun/bin/bun"
+SOCK="/tmp/token-monsters.sock"
+
+cleanup() {
+  if [ -n "$DAEMON_PID" ] && kill -0 "$DAEMON_PID" 2>/dev/null; then
+    kill "$DAEMON_PID" 2>/dev/null
+    wait "$DAEMON_PID" 2>/dev/null
+  fi
+  rm -f "$SOCK"
+}
+trap cleanup EXIT INT TERM
+
+# Start daemon in background
+"$BUN" run "$DIR/daemon/index.ts" &>/dev/null &
+DAEMON_PID=$!
+
+# Brief pause for socket to come up
+sleep 0.3
+
+# Launch TUI (foreground)
+"$BUN" run "$DIR/src/index.tsx"
