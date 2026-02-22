@@ -1,25 +1,65 @@
 #!/usr/bin/env bash
-# tokemon — start the daemon in the background and launch the TUI
+# tokemon — start the daemon + TUI, with smart terminal detection
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUN="${HOME}/.bun/bin/bun"
 SOCK="/tmp/token-monsters.sock"
 
-cleanup() {
-  if [ -n "$DAEMON_PID" ] && kill -0 "$DAEMON_PID" 2>/dev/null; then
-    kill "$DAEMON_PID" 2>/dev/null
-    wait "$DAEMON_PID" 2>/dev/null
-  fi
-  rm -f "$SOCK"
+# ── Terminal detection ────────────────────────────────────────────────
+TIER1_TERMINALS="ghostty alacritty wezterm kitty"
+
+is_tier1() {
+  local prog
+  prog="$(echo "${TERM_PROGRAM:-}" | tr '[:upper:]' '[:lower:]')"
+  for t in $TIER1_TERMINALS; do
+    [ "$prog" = "$t" ] && return 0
+  done
+  # kitty sets TERM=xterm-kitty instead of TERM_PROGRAM
+  [ "$(echo "${TERM:-}" | tr '[:upper:]' '[:lower:]')" = "xterm-kitty" ] && return 0
+  return 1
 }
-trap cleanup EXIT INT TERM
 
-# Start daemon in background
-"$BUN" run "$DIR/daemon/index.ts" &>/dev/null &
-DAEMON_PID=$!
+# ── Ghostty launcher ─────────────────────────────────────────────────
+launch_in_ghostty() {
+  local ghostty=""
+  if command -v ghostty &>/dev/null; then
+    ghostty="ghostty"
+  elif [ -x "/Applications/Ghostty.app/Contents/MacOS/ghostty" ]; then
+    ghostty="/Applications/Ghostty.app/Contents/MacOS/ghostty"
+  fi
+  if [ -z "$ghostty" ]; then
+    echo "Error: Ghostty not found. Install it from https://ghostty.org"
+    exit 1
+  fi
+  TOKEMON_WINDOW=1 exec "$ghostty" --title="Token Monsters" -e "$0"
+}
 
-# Brief pause for socket to come up
-sleep 0.3
+# ── Game runner ───────────────────────────────────────────────────────
+run_game() {
+  cleanup() {
+    if [ -n "$DAEMON_PID" ] && kill -0 "$DAEMON_PID" 2>/dev/null; then
+      kill "$DAEMON_PID" 2>/dev/null
+      wait "$DAEMON_PID" 2>/dev/null
+    fi
+    rm -f "$SOCK"
+  }
+  trap cleanup EXIT INT TERM
 
-# Launch TUI (foreground)
-"$BUN" run "$DIR/src/index.tsx"
+  # Start daemon in background
+  "$BUN" run "$DIR/daemon/index.ts" &>/dev/null &
+  DAEMON_PID=$!
+
+  # Brief pause for socket to come up
+  sleep 0.3
+
+  # Launch TUI (foreground)
+  "$BUN" run "$DIR/src/index.tsx"
+}
+
+# ── Main ──────────────────────────────────────────────────────────────
+if is_tier1 || [ "${TOKEMON_WINDOW:-}" = "1" ]; then
+  run_game
+else
+  # Not a capable terminal — auto-launch in Ghostty
+  launch_in_ghostty
+fi

@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "tokemon": "./bin/tokemon"
+    "tokemon": "./bin/tokemon",
+    "tokemon-view": "./bin/tokemon-view"
   },
   "scripts": {
     "tokemon": "./bin/tokemon",
-    "start": "bun run src/index.tsx",
+    "view": "./bin/tokemon-view",
+    "start": "./bin/tokemon",
     "dev": "bun --watch run src/index.tsx",
     "daemon": "bun run daemon/index.ts",
     "test": "bun test",

@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# tokemon-view — render a model in a spinning 3D viewer
+
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+BUN="${HOME}/.bun/bin/bun"
+
+# ── Terminal detection ────────────────────────────────────────────────
+TIER1_TERMINALS="ghostty alacritty wezterm kitty"
+
+is_tier1() {
+  local prog
+  prog="$(echo "${TERM_PROGRAM:-}" | tr '[:upper:]' '[:lower:]')"
+  for t in $TIER1_TERMINALS; do
+    [ "$prog" = "$t" ] && return 0
+  done
+  [ "$(echo "${TERM:-}" | tr '[:upper:]' '[:lower:]')" = "xterm-kitty" ] && return 0
+  return 1
+}
+
+# ── Ghostty launcher ─────────────────────────────────────────────────
+launch_in_ghostty() {
+  local ghostty=""
+  if command -v ghostty &>/dev/null; then
+    ghostty="ghostty"
+  elif [ -x "/Applications/Ghostty.app/Contents/MacOS/ghostty" ]; then
+    ghostty="/Applications/Ghostty.app/Contents/MacOS/ghostty"
+  fi
+  if [ -z "$ghostty" ]; then
+    echo "Error: Ghostty not found. Install it from https://ghostty.org"
+    exit 1
+  fi
+  shift  # remove --launch from args
+  TOKEMON_WINDOW=1 exec "$ghostty" --title="Token Monsters — $1" -e "$0" "$@"
+}
+
+# ── Usage ─────────────────────────────────────────────────────────────
+usage() {
+  echo "Usage: tokemon-view <model>          (in a capable terminal)"
+  echo "       tokemon-view --launch <model> (spawns Ghostty window)"
+  echo ""
+  echo "Available models: pikachu, bulbasaur"
+  exit 1
+}
+
+# ── Resolve model to test file ────────────────────────────────────────
+resolve_model() {
+  local name="$1"
+  local file="$DIR/src/${name}-test.tsx"
+  if [ ! -f "$file" ]; then
+    echo "Error: Unknown model '${name}'"
+    echo "Available models: pikachu, bulbasaur"
+    exit 1
+  fi
+  echo "$file"
+}
+
+# ── Main ──────────────────────────────────────────────────────────────
+if [ "$1" = "--launch" ]; then
+  [ -z "$2" ] && usage
+  launch_in_ghostty "$@"
+fi
+
+MODEL="${1:-}"
+[ -z "$MODEL" ] && usage
+
+MODEL_FILE="$(resolve_model "$MODEL")"
+
+if is_tier1 || [ "${TOKEMON_WINDOW:-}" = "1" ]; then
+  exec "$BUN" run "$MODEL_FILE"
+else
+  echo "Your terminal doesn't support Token Monsters' 3D rendering."
+  echo ""
+  echo "Recommended terminals: Ghostty, Alacritty, Kitty, WezTerm"
+  echo ""
+  echo "Or run with --launch to open in a Ghostty window:"
+  echo "  tokemon-view --launch ${MODEL}"
+  exit 1
+fi
