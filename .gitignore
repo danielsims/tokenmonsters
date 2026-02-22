@@ -6,3 +6,4 @@ data/
 .DS_Store
 .env
 /tmp/token-monsters.sock
+tools/out/
