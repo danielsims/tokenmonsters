@@ -1,10 +1,11 @@
 import { useGame } from "../../game/context";
 import type { TokenSource } from "../../models/types";
+import { t } from "../theme";
 
 const SOURCE_COLORS: Record<TokenSource, string> = {
-  claude: "#ff8844",
-  codex: "#44bbff",
-  opencode: "#44ff88",
+  claude: t.source.claude,
+  codex: t.source.codex,
+  opencode: t.source.opencode,
 };
 
 const SOURCE_LABELS: Record<TokenSource, string> = {
@@ -30,7 +31,7 @@ export function TokenTicker() {
   if (recentFeeds.length === 0) {
     return (
       <box paddingX={1}>
-        <text fg="#555555">No token feeds yet. Use an AI tool to feed your monster!</text>
+        <text fg={t.text.dim}>No token feeds yet. Use an AI tool to feed your monster!</text>
       </box>
     );
   }
@@ -40,7 +41,7 @@ export function TokenTicker() {
 
   return (
     <box flexDirection="column" paddingX={1}>
-      <text fg="#888888">
+      <text fg={t.text.muted}>
         <u>Recent Feeds</u>
       </text>
       {visible.map((feed, i) => {
@@ -49,9 +50,9 @@ export function TokenTicker() {
         const label = SOURCE_LABELS[feed.source];
         return (
           <text key={feed.id ?? i}>
-            <span fg="#555555">{formatTime(feed.fedAt)} </span>
+            <span fg={t.text.dim}>{formatTime(feed.fedAt)} </span>
             <span fg={color}>{label.padEnd(8)}</span>
-            <span fg="#aaaaaa"> +{formatTokens(total)} tokens</span>
+            <span fg={t.text.secondary}> +{formatTokens(total)} tokens</span>
           </text>
         );
       })}
