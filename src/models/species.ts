@@ -78,6 +78,18 @@ const STARTER_SPECIES: Species[] = [
       { stage: "prime", name: "Daemon", description: "It runs silently in the background now. Always watching, never stopping.", evolvesAtLevel: null },
     ],
   },
+  {
+    id: "kilobit",
+    description: "A compact data creature that doubles in density as it grows. Small but deceptively heavy.",
+    rarity: "rare",
+    baseHungerRate: 3.0,
+    baseHappinessRate: 2.0,
+    forms: [
+      { stage: "egg", name: "Dense Egg", description: "A heavy little egg packed tight with raw data.", evolvesAtLevel: 5 },
+      { stage: "hatchling", name: "Kilobit", description: "A compact critter packed with raw data.", evolvesAtLevel: 18 },
+      { stage: "prime", name: "Megabyte", description: "A lumbering but lovable tank. Stores everything, forgets nothing.", evolvesAtLevel: null },
+    ],
+  },
 ];
 
 export function seedSpecies(db: Database): void {
