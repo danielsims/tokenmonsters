@@ -5,6 +5,7 @@ import { getEvolutionHistory, getTotalTokensBySource } from "../../db/queries";
 import { getCurrentForm, getDisplayName } from "../../models/evolution";
 import { getLevel } from "../../models/level";
 import { StatusBar } from "../components/StatusBar";
+import { t } from "../theme";
 
 const TRAIT_LABELS: Record<string, string> = {
   bodyShape: "Body Shape",
@@ -23,7 +24,7 @@ export function InfoScreen() {
   if (!monster || !species) {
     return (
       <box justifyContent="center" alignItems="center" flexGrow={1}>
-        <text fg="#666666">No monster data.</text>
+        <text fg={t.text.muted}>No monster data.</text>
       </box>
     );
   }
@@ -43,33 +44,33 @@ export function InfoScreen() {
       <box
         border
         borderStyle="rounded"
-        borderColor="#333355"
-        backgroundColor="#0d0d1a"
+        borderColor={t.border.muted}
+        backgroundColor={t.bg.base}
         paddingX={2}
         height={3}
       >
         <text>
-          <strong fg="#ffffff">Monster Info</strong>
-          <span fg="#666688"> - {displayName}</span>
-          <span fg="#ffdd44"> Lv.{level}</span>
+          <strong fg={t.text.primary}>Monster Info</strong>
+          <span fg={t.text.dim}> - {displayName}</span>
+          <span fg={t.accent.primary}> Lv.{level}</span>
         </text>
       </box>
 
       <box flexDirection="row" flexGrow={1}>
         {/* Left column: Genome + Evolution Line */}
         <box flexGrow={1} flexDirection="column" paddingX={2} paddingY={1}>
-          <text fg="#aaaacc">
+          <text fg={t.text.secondary}>
             <u>Genome Traits</u>
           </text>
-          <text fg="#555555">ID: {monster.genome.toString("hex").slice(0, 16)}...</text>
+          <text fg={t.text.dim}>ID: {monster.genome.toString("hex").slice(0, 16)}...</text>
           <box height={1} />
           {(Object.keys(TRAIT_LABELS) as (keyof typeof TRAIT_LABELS)[]).map((key) => {
             const genes = primary[key as keyof typeof primary];
             if (!genes) return null;
             return (
-              <text key={key} fg="#888888">
+              <text key={key} fg={t.text.muted}>
                 {TRAIT_LABELS[key].padEnd(16)}{" "}
-                <span fg="#aaaacc">
+                <span fg={t.text.secondary}>
                   [{genes[0]}, {genes[1]}]
                 </span>
               </text>
@@ -77,20 +78,20 @@ export function InfoScreen() {
           })}
           <box height={1} />
           <box flexDirection="row" gap={2}>
-            <text fg="#888888">Primary: </text>
+            <text fg={t.text.muted}>Primary: </text>
             <text fg={primaryColor}>{"\u2588\u2588\u2588\u2588"} {primaryColor}</text>
           </box>
           <box flexDirection="row" gap={2}>
-            <text fg="#888888">Secondary: </text>
+            <text fg={t.text.muted}>Secondary: </text>
             <text fg={secondaryColor}>{"\u2588\u2588\u2588\u2588"} {secondaryColor}</text>
           </box>
           <box height={1} />
-          <text fg="#aaaacc">
+          <text fg={t.text.secondary}>
             <u>Evolution Line</u>
           </text>
           {species.forms.map((form, i) => {
             const isCurrent = form.stage === monster.stage;
-            const color = isCurrent ? "#ffdd44" : "#666688";
+            const color = isCurrent ? t.accent.primary : t.text.dim;
             const marker = isCurrent ? ">" : " ";
             return (
               <text key={i} fg={color}>
@@ -102,37 +103,37 @@ export function InfoScreen() {
 
         {/* Right column: History + Tokens */}
         <box flexGrow={1} flexDirection="column" paddingX={2} paddingY={1}>
-          <text fg="#aaaacc">
+          <text fg={t.text.secondary}>
             <u>Token Sources</u>
           </text>
-          <text fg="#ff8844">Claude:   {tokenTotals.claude.toLocaleString()}</text>
-          <text fg="#44bbff">Codex:    {tokenTotals.codex.toLocaleString()}</text>
-          <text fg="#44ff88">OpenCode: {tokenTotals.opencode.toLocaleString()}</text>
+          <text fg={t.source.claude}>Claude:   {tokenTotals.claude.toLocaleString()}</text>
+          <text fg={t.source.codex}>Codex:    {tokenTotals.codex.toLocaleString()}</text>
+          <text fg={t.source.opencode}>OpenCode: {tokenTotals.opencode.toLocaleString()}</text>
           <box height={1} />
-          <text fg="#aaaacc">
+          <text fg={t.text.secondary}>
             <u>Evolution History</u>
           </text>
           {history.length === 0 ? (
-            <text fg="#555555">No evolutions yet.</text>
+            <text fg={t.text.dim}>No evolutions yet.</text>
           ) : (
             history.map((h, i) => (
-              <text key={i} fg="#888888">
+              <text key={i} fg={t.text.muted}>
                 {h.fromStage} {"->"} {h.toStage} at{" "}
                 {new Date(h.evolvedAt).toLocaleDateString()}
               </text>
             ))
           )}
           <box height={1} />
-          <text fg="#aaaacc">
+          <text fg={t.text.secondary}>
             <u>Details</u>
           </text>
-          <text fg="#888888">Species:   {species.id} ({species.rarity})</text>
-          <text fg="#888888">Origin:    {monster.origin}</text>
-          <text fg="#888888">
+          <text fg={t.text.muted}>Species:   {species.id} ({species.rarity})</text>
+          <text fg={t.text.muted}>Origin:    {monster.origin}</text>
+          <text fg={t.text.muted}>
             Created: {new Date(monster.createdAt).toLocaleDateString()}
           </text>
           {monster.hatchedAt && (
-            <text fg="#888888">
+            <text fg={t.text.muted}>
               Hatched: {new Date(monster.hatchedAt).toLocaleDateString()}
             </text>
           )}
