@@ -4,12 +4,13 @@ import { getAllSpecies, getOwnedSpeciesStages } from "../../db/queries";
 import { RegistryPreview } from "../components/RegistryPreview";
 import { StatusBar } from "../components/StatusBar";
 import type { Species, Rarity, EvolutionForm, Stage } from "../../models/types";
+import { t } from "../theme";
 
 const RARITY_COLORS: Record<Rarity, string> = {
-  common: "#aaaaaa",
-  uncommon: "#44bb88",
-  rare: "#cc8844",
-  legendary: "#dd55dd",
+  common: t.rarity.common,
+  uncommon: t.rarity.uncommon,
+  rare: t.rarity.rare,
+  legendary: t.rarity.legendary,
 };
 
 const RARITY_LABELS: Record<Rarity, string> = {
@@ -82,13 +83,13 @@ export function RegistryScreen() {
         height={3}
         borderStyle="rounded"
         border
-        borderColor="#333355"
-        backgroundColor="#0d0d1a"
+        borderColor={t.border.muted}
+        backgroundColor={t.bg.base}
       >
         <text>
-          <strong fg="#ffffff">Registry</strong>
+          <strong fg={t.text.primary}>Registry</strong>
         </text>
-        {devShowAll && <text fg="#ff8844">[DEV]</text>}
+        {devShowAll && <text fg={t.accent.warm}>[DEV]</text>}
       </box>
 
       {/* Main content */}
@@ -99,8 +100,8 @@ export function RegistryScreen() {
           flexDirection="column"
           borderStyle="rounded"
           border
-          borderColor="#222244"
-          backgroundColor="#0a0a15"
+          borderColor={t.border.muted}
+          backgroundColor={t.bg.surface}
           overflow="hidden"
         >
           {entries.map((entry, i) => {
@@ -114,13 +115,13 @@ export function RegistryScreen() {
 
             let nameColor: string;
             if (!visible) {
-              nameColor = "#444455";
+              nameColor = t.text.hidden;
             } else if (locked) {
-              nameColor = isSel ? "#666677" : "#444455";
+              nameColor = isSel ? t.text.dim : t.text.hidden;
             } else {
-              nameColor = isSel ? "#ffffff" : "#888899";
+              nameColor = isSel ? t.text.primary : t.text.muted;
             }
-            const rarityColor = visible ? RARITY_COLORS[entry.species.rarity] : "#333344";
+            const rarityColor = visible ? RARITY_COLORS[entry.species.rarity] : t.text.hidden;
 
             return (
               <box
@@ -129,12 +130,12 @@ export function RegistryScreen() {
                 justifyContent="space-between"
                 paddingX={1}
                 height={1}
-                backgroundColor={isSel ? "#1a1a2e" : undefined}
+                backgroundColor={isSel ? t.bg.overlay : undefined}
               >
                 <text fg={nameColor}>
                   {cursor}{name}
                 </text>
-                <text fg={locked ? "#333344" : rarityColor}>{rarityLabel}</text>
+                <text fg={locked ? t.text.hidden : rarityColor}>{rarityLabel}</text>
               </box>
             );
           })}
@@ -142,22 +143,22 @@ export function RegistryScreen() {
 
         {/* Right: Preview + Details */}
         <box flexGrow={1} flexDirection="column">
-          {/* 3D Preview */}
+          {/* 3D Preview — show darkened silhouette for unowned species */}
           <box flexGrow={1}>
-            {canSee && selected ? (
+            {selected ? (
               <RegistryPreview
                 species={selected.species}
                 formIndex={selected.formIndex}
-                locked={selectedLocked && !devShowAll}
+                locked={(!isOwned || selectedLocked) && !devShowAll}
               />
             ) : (
               <box
                 justifyContent="center"
                 alignItems="center"
                 flexGrow={1}
-                backgroundColor="#0a0a12"
+                backgroundColor={t.bg.surface}
               >
-                <text fg="#333344">???</text>
+                <text fg={t.text.hidden}>???</text>
               </box>
             )}
           </box>
@@ -168,8 +169,8 @@ export function RegistryScreen() {
             flexDirection="column"
             borderStyle="rounded"
             border
-            borderColor="#222244"
-            backgroundColor="#0a0a15"
+            borderColor={t.border.muted}
+            backgroundColor={t.bg.surface}
             paddingX={2}
             paddingY={1}
           >
@@ -181,8 +182,8 @@ export function RegistryScreen() {
               />
             ) : (
               <box flexDirection="column">
-                <text fg="#444455">???</text>
-                <text fg="#333344">Species not yet discovered.</text>
+                <text fg={t.text.hidden}>???</text>
+                <text fg={t.text.hidden}>Species not yet discovered.</text>
               </box>
             )}
           </box>
@@ -206,19 +207,19 @@ function FormDetail({
   return (
     <box flexDirection="column">
       <text>
-        <strong fg={locked ? "#444455" : "#ffffff"}>{form.name}</strong>
+        <strong fg={locked ? t.text.hidden : t.text.primary}>{form.name}</strong>
         {"  "}
-        <span fg={locked ? "#333344" : RARITY_COLORS[species.rarity]}>
+        <span fg={locked ? t.text.hidden : RARITY_COLORS[species.rarity]}>
           {RARITY_LABELS[species.rarity]}
         </span>
       </text>
-      <text fg={locked ? "#333344" : "#888899"}>
+      <text fg={locked ? t.text.hidden : t.text.muted}>
         {locked ? "Not yet evolved." : species.description}
       </text>
       {!locked && (
         <>
           <box height={1} />
-          <text fg="#777799">{form.description}</text>
+          <text fg={t.text.dim}>{form.description}</text>
         </>
       )}
     </box>
