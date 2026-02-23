@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { useRef, useMemo, useCallback, useState, useEffect } from "react";
-import { loadGlbTestScene } from "../../three/glb-loader";
+import { loadGlbTestScene, updateSceneBackground } from "../../three/glb-loader";
 import { resolve } from "path";
 import { existsSync } from "fs";
 import type { Species } from "../../models/types";
+import { t, getSceneBg } from "../theme";
 
 const modelsRoot = resolve(import.meta.dir, "../../three/models");
 
@@ -116,6 +117,7 @@ export function RegistryPreview({ species, formIndex, locked = false }: Registry
       cameraDistance: 3.2,
       orbitSpeed: 0.3,
       ...speciesConfig,
+      background: getSceneBg(),
     });
   }, [glbPath, speciesConfig]);
 
@@ -147,6 +149,12 @@ export function RegistryPreview({ species, formIndex, locked = false }: Registry
     if (glbScene && glbReady && readySceneRef.current === glbScene) return glbScene;
     return null;
   }, [glbScene, glbReady]);
+
+  // Update scene background on theme change without rebuilding the scene
+  const sceneBg = getSceneBg();
+  useEffect(() => {
+    if (sceneData) updateSceneBackground(sceneData.scene, sceneBg);
+  }, [sceneData, sceneBg]);
 
   // Hold onto the last valid scene so it keeps displaying while the next loads.
   // This eliminates flicker: old GLB stays visible until new GLB is ready.
@@ -184,8 +192,8 @@ export function RegistryPreview({ species, formIndex, locked = false }: Registry
 
   if (!species || !display) {
     return (
-      <box justifyContent="center" alignItems="center" flexGrow={1} backgroundColor="#0a0a12">
-        <text fg="#333344">???</text>
+      <box justifyContent="center" alignItems="center" flexGrow={1} backgroundColor={t.bg.surface}>
+        <text fg={t.text.hidden}>???</text>
       </box>
     );
   }
