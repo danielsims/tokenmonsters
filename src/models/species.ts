@@ -90,6 +90,19 @@ const STARTER_SPECIES: Species[] = [
       { stage: "prime", name: "Megabyte", description: "A lumbering but lovable tank. Stores everything, forgets nothing.", evolvesAtLevel: null },
     ],
   },
+  {
+    id: "pinchy",
+    description: "An open-source crustacean that grows by molting its shell. Each molt reveals harder armour underneath. Thrives in any environment you put it in.",
+    rarity: "common",
+    baseHungerRate: 3.5,
+    baseHappinessRate: 2.0,
+    forms: [
+      { stage: "egg", name: "Molting Egg", description: "An egg already shedding its outer layer.", evolvesAtLevel: 6 },
+      { stage: "hatchling", name: "Pinchy", description: "A small digital crab that snips rogue packets. Had three names before it hatched.", evolvesAtLevel: 16 },
+      { stage: "prime", name: "Viceclaw", description: "Fiercely loyal to its human. Its claws crack encryption.", evolvesAtLevel: 36 },
+      { stage: "apex", name: "Gigaclaw", description: "A colossal siege crab. One open claw collapses entire data structures.", evolvesAtLevel: null },
+    ],
+  },
 ];
 
 export function seedSpecies(db: Database): void {
