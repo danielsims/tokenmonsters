@@ -3,6 +3,7 @@ import { ThreeRenderable } from "@opentui/core/3d";
 import { createRoot, extend } from "@opentui/react";
 import { App } from "./App";
 import { getDatabase, closeDatabase } from "./db/database";
+import { stopAllSounds } from "./audio/player";
 
 // Register ThreeRenderable as a JSX element
 extend({ threeScene: ThreeRenderable });
@@ -21,6 +22,7 @@ const renderer = await createCliRenderer({
   exitOnCtrlC: false, // We handle Ctrl+C ourselves for clean shutdown
   targetFps: 30,
   onDestroy: () => {
+    stopAllSounds();
     closeDatabase();
   },
 });
