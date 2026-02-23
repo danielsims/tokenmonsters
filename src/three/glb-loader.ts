@@ -249,6 +249,7 @@ export function loadGlbTestScene(
     orbitSpeed = 0.3,
     background = 0x2a3a5c,
     showGround = terminal.showGround,
+    yOffset = 0,
   } = options;
 
   const scene = new THREE.Scene();
@@ -354,7 +355,7 @@ export function loadGlbTestScene(
         const center = box.getCenter(new THREE.Vector3());
         model.position.x -= center.x;
         model.position.z -= center.z;
-        model.position.y -= box.min.y;
+        model.position.y -= box.min.y - yOffset;
 
         pivot.add(model);
 
