@@ -9,16 +9,25 @@ import { HatchScreen } from "./ui/screens/HatchScreen";
 import { EvolveScreen } from "./ui/screens/EvolveScreen";
 import { WelcomeScreen } from "./ui/screens/WelcomeScreen";
 import { RegistryScreen } from "./ui/screens/RegistryScreen";
+import { getSetting, setSetting } from "./db/queries";
+import { cycleTheme, setTheme, getThemeName } from "./ui/theme";
 
 type Screen = "welcome" | "home" | "info" | "hatch" | "evolve" | "registry";
 
 function AppInner() {
   const renderer = useRenderer();
-  const { monster, isEvolving, setEvolving } = useGame();
+  const { monster, isEvolving, setEvolving, reportKeystroke } = useGame();
   const { isFirstRun, generateEgg } = useMonster();
   useGameLoop();
 
+  // Theme version counter — bump to force re-render after theme switch
+  const [, setThemeVersion] = useState(0);
+
   const [screen, setScreen] = useState<Screen>(() => {
+    // Restore saved theme on startup
+    const saved = getSetting("theme");
+    if (saved) setTheme(saved);
+
     if (isFirstRun()) return "welcome";
     return "home";
   });
@@ -46,6 +55,11 @@ function AppInner() {
     []
   );
 
+  // Track ALL keypresses for focus-gating (runs on every screen including evolve/hatch)
+  useKeyboard(() => {
+    reportKeystroke();
+  });
+
   useKeyboard((key) => {
     if (screen === "welcome" || screen === "hatch" || screen === "evolve") return;
 
@@ -60,6 +74,18 @@ function AppInner() {
 
     if (key.name === "r") {
       setScreen((s) => (s === "registry" ? "home" : "registry"));
+    }
+
+    if (key.name === "m") {
+      const current = getSetting("sound_mute");
+      setSetting("sound_mute", current === "on" ? "off" : "on");
+      setThemeVersion((v) => v + 1); // re-render to update StatusBar mute label
+    }
+
+    if (key.name === "t") {
+      const newName = cycleTheme();
+      setSetting("theme", newName);
+      setThemeVersion((v) => v + 1);
     }
   });
 
