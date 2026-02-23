@@ -27,6 +27,7 @@ interface SpeciesConfig {
   cameraDistance?: number;
   cameraHeight?: number;
   lookAtHeight?: number;
+  yOffset?: number;
 }
 
 function getGlbModel(species: Species | null, stage: Stage): string | null {
@@ -52,10 +53,12 @@ function loadFormConfig(speciesId: string, formName: string): SpeciesConfig {
     const cd = formData.cameraDistance ?? raw.cameraDistance;
     const ch = formData.cameraHeight ?? raw.cameraHeight;
     const lh = formData.lookAtHeight ?? raw.lookAtHeight;
+    const yo = formData.yOffset ?? raw.yOffset;
     if (th != null) config.targetHeight = th;
     if (cd != null) config.cameraDistance = cd;
     if (ch != null) config.cameraHeight = ch;
     if (lh != null) config.lookAtHeight = lh;
+    if (yo != null) config.yOffset = yo;
     return config;
   } catch {
     return {};
