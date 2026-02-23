@@ -241,6 +241,21 @@ export function recordEvolution(record: Omit<EvolutionRecord, "id">): EvolutionR
   };
 }
 
+// --- Settings ---
+
+export function getSetting(key: string): string | null {
+  const db = getDatabase();
+  const row = db.query("SELECT value FROM settings WHERE key = ?").get(key) as any;
+  return row ? row.value : null;
+}
+
+export function setSetting(key: string, value: string): void {
+  const db = getDatabase();
+  db.query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, value);
+}
+
+// --- Evolution History ---
+
 export function getEvolutionHistory(monsterId: string): EvolutionRecord[] {
   const db = getDatabase();
   const rows = db.query(
