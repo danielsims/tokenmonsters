@@ -42,15 +42,15 @@ const STARTER_SPECIES: Species[] = [
   },
   {
     id: "sparkfin",
-    description: "An aquatic-styled creature that swims through data streams. Its fins crackle with energy.",
+    description: "An aquatic creature that swims through data streams. Its fins crackle with current.",
     rarity: "uncommon",
     baseHungerRate: 2.5,
     baseHappinessRate: 2.5,
     forms: [
-      { stage: "egg", name: "Sparkfin Egg", description: "An egg that fizzes like carbonated data.", evolvesAtLevel: 6 },
-      { stage: "hatchling", name: "Sparklet", description: "A tiny finned creature trailing sparks.", evolvesAtLevel: 16 },
-      { stage: "prime", name: "Sparkeel", description: "An electric eel of pure streaming energy.", evolvesAtLevel: 36 },
-      { stage: "apex", name: "Sparkstorm", description: "A tempest of lightning and data.", evolvesAtLevel: null },
+      { stage: "egg", name: "Fizzing Egg", description: "An egg that crackles and pops like static discharge. Don't drop it in water.", evolvesAtLevel: 6 },
+      { stage: "hatchling", name: "Fry", description: "A tiny fish trailing sparks through shallow data streams.", evolvesAtLevel: 16 },
+      { stage: "prime", name: "Volteel", description: "An electric eel surging through data currents. Touch it and your hair stands up.", evolvesAtLevel: 36 },
+      { stage: "apex", name: "Ampstorm", description: "A tempest of pure amperage. Entire networks go dark in its wake.", evolvesAtLevel: null },
     ],
   },
   {
