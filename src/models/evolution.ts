@@ -60,7 +60,8 @@ export function getDisplayName(monster: Monster, species: Species): string {
   const formName = form?.name ?? monster.stage;
 
   if (monster.name) {
-    return `${monster.name} the ${formName}`;
+    const capitalized = monster.name.charAt(0).toUpperCase() + monster.name.slice(1);
+    return `${capitalized} the ${formName}`;
   }
   return formName;
 }
