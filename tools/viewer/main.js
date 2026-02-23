@@ -255,11 +255,14 @@ function selectViewport(vp) {
 // ---------------------------------------------------------------------------
 
 const SPECIES = [
-  { id: "glimmer", forms: ["glimmer-egg", "glimlet", "glimmora", "glimmarion"] },
-  { id: "byteclaw", forms: ["byteclaw-egg", "bytepup", "bytesnap", "bytewrath"] },
-  { id: "whisperscale", forms: ["whisperscale-egg", "whispling", "whispera"] },
-  { id: "sparkfin", forms: ["sparkfin-egg", "sparklet", "sparkeel", "sparkstorm"] },
-  { id: "nullwyrm", forms: ["nullwyrm-egg", "nullite", "nulldrake", "nullvoid"] },
+  { id: "glimmer", forms: ["dim-egg", "flicker", "luminos", "phosphor"] },
+  { id: "byteclaw", forms: ["jagged-egg", "bytepup", "bytesnap", "bytewrath"] },
+  { id: "whisperscale", forms: ["hollow-egg", "slink", "cachefang"] },
+  { id: "sparkfin", forms: ["fizzing-egg", "fry", "volteel", "ampstorm"] },
+  { id: "nullwyrm", forms: ["absent-egg", "segfault", "voidmaw", "nullvoid"] },
+  { id: "qwerty", forms: ["qwerty-egg", "qwerty", "daemon"] },
+  { id: "kilobit", forms: ["dense-egg", "kilobit", "megabyte"] },
+  { id: "pinchy", forms: ["molting-egg", "pinchy", "viceclaw", "gigaclaw"] },
 ];
 
 // ---------------------------------------------------------------------------
