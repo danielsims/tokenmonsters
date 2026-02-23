@@ -66,6 +66,18 @@ const STARTER_SPECIES: Species[] = [
       { stage: "apex", name: "Nullvoid", description: "A void mage that rewrites reality. Its spells are segfaults, its staff a dangling pointer.", evolvesAtLevel: null },
     ],
   },
+  {
+    id: "qwerty",
+    description: "A mischievous creature that materialises from rapid keystrokes. Patient and quiet at first, it grows into something unsettlingly aware.",
+    rarity: "rare",
+    baseHungerRate: 2.5,
+    baseHappinessRate: 3.0,
+    forms: [
+      { stage: "egg", name: "Qwerty Egg", description: "An egg that rattles like a mechanical switch.", evolvesAtLevel: 5 },
+      { stage: "hatchling", name: "Qwerty", description: "A tiny creature that skitters across keyboards, chattering in clicks.", evolvesAtLevel: 15 },
+      { stage: "prime", name: "Daemon", description: "It runs silently in the background now. Always watching, never stopping.", evolvesAtLevel: null },
+    ],
+  },
 ];
 
 export function seedSpecies(db: Database): void {
