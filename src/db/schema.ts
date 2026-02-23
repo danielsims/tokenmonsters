@@ -52,6 +52,11 @@ CREATE TABLE IF NOT EXISTS evolution_history (
   tokens_at_evolution INTEGER NOT NULL,
   FOREIGN KEY (monster_id) REFERENCES monsters(id)
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 `;
 
 export function applySchema(db: Database): void {
