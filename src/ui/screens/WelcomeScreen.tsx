@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useKeyboard } from "@opentui/react";
 import { useMonster } from "../hooks/useMonster";
+import { t } from "../theme";
 
 const WELCOME_ART = [
   "  _____ ___  _  _____ _  _   __  __  ___  _  _ ___ _____ ___ ___  ___",
@@ -48,21 +49,21 @@ export function WelcomeScreen({ onComplete }: { onComplete: (name: string) => vo
       justifyContent="center"
       width="100%"
       height="100%"
-      backgroundColor="#0a0a1a"
+      backgroundColor={t.bg.base}
     >
-      <text fg="#ff8844">{WELCOME_ART}</text>
+      <text fg={t.accent.warm}>{WELCOME_ART}</text>
       <box height={2} />
 
       {step === "intro" && (
         <>
-          <text fg="#aaaacc">
+          <text fg={t.text.secondary}>
             Your AI token consumption feeds and evolves digital creatures.
           </text>
-          <text fg="#888888">
+          <text fg={t.text.muted}>
             Every token from Claude Code, Codex, or OpenCode powers your monster's growth.
           </text>
           <box height={2} />
-          <text fg="#ffffff">
+          <text fg={t.text.primary}>
             <strong>Press ENTER to receive your first egg!</strong>
           </text>
         </>
@@ -70,28 +71,28 @@ export function WelcomeScreen({ onComplete }: { onComplete: (name: string) => vo
 
       {step === "naming" && (
         <>
-          <text fg="#44ff44">
+          <text fg={t.accent.green}>
             A mysterious egg appears before you...
           </text>
           <box height={1} />
-          <text fg="#ffffff">
+          <text fg={t.text.primary}>
             <strong>Name your creature:</strong>
           </text>
           <box height={1} />
           <box
             border
             borderStyle="rounded"
-            borderColor="#444466"
+            borderColor={t.border.muted}
             paddingX={2}
             width={40}
           >
-            <text fg={name.length > 0 ? "#ffffff" : "#555555"}>
+            <text fg={name.length > 0 ? t.text.primary : t.text.dim}>
               {name.length > 0 ? name : "Type a name..."}
-              <span fg="#ffdd44">_</span>
+              <span fg={t.accent.primary}>_</span>
             </text>
           </box>
           <box height={1} />
-          <text fg="#555555">Press ENTER to confirm</text>
+          <text fg={t.text.dim}>Press ENTER to confirm</text>
         </>
       )}
     </box>
