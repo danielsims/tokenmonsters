@@ -1,7 +1,15 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import type { Monster, Species, TokenFeed, TokenSource } from "../models/types";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
+import type { Monster, Species, TokenFeed, TokenSource, Stage } from "../models/types";
 import { getActiveMonster, getMonster, getSpeciesById, getRecentFeeds, updateMonster } from "../db/queries";
 import { gameTick, feedMonster, TICK_INTERVAL } from "./engine";
+import { playSound } from "../audio/player";
+
+/** How long without a keypress before we consider the user idle (ms) */
+const IDLE_THRESHOLD = 30_000;
+
+interface PendingEvolution {
+  newStage: Stage;
+}
 
 interface GameState {
   monster: Monster | null;
@@ -9,6 +17,7 @@ interface GameState {
   recentFeeds: TokenFeed[];
   isEvolving: boolean;
   evolutionTarget: string | null;
+  evolutionPending: boolean;
   daemonConnected: boolean;
 }
 
@@ -18,12 +27,16 @@ interface GameActions {
   nameMonster: (name: string) => void;
   setDaemonConnected: (connected: boolean) => void;
   setEvolving: (evolving: boolean) => void;
+  reportKeystroke: () => void;
 }
 
 const GameContext = createContext<(GameState & GameActions) | null>(null);
 
 // Track monster ID outside React so intervals/callbacks always know which monster
 let activeId: string | null = null;
+
+// Track last keystroke time outside React — needs to be readable from callbacks
+let lastKeystrokeAt = Date.now();
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [monster, setMonster] = useState<Monster | null>(null);
@@ -32,6 +45,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [isEvolving, setIsEvolving] = useState(false);
   const [evolutionTarget, setEvolutionTarget] = useState<string | null>(null);
   const [daemonConnected, setDaemonConnected] = useState(false);
+  const pendingRef = useRef<PendingEvolution | null>(null);
+  const [evolutionPending, setEvolutionPending] = useState(false);
+
+  // Play evolve sound when evolution screen fires
+  const prevEvolvingRef = useRef(false);
+  useEffect(() => {
+    if (isEvolving && !prevEvolvingRef.current) {
+      playSound("evolve");
+    }
+    prevEvolvingRef.current = isEvolving;
+  }, [isEvolving]);
 
   const refresh = useCallback(() => {
     const m = getActiveMonster();
@@ -67,6 +91,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [activeId]);
 
+  // Poll for pending evolution — check every 500ms if user has returned
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!pendingRef.current) return;
+      const timeSinceKeystroke = Date.now() - lastKeystrokeAt;
+      if (timeSinceKeystroke < 2000) {
+        // User is back — fire the evolution
+        const pending = pendingRef.current;
+        pendingRef.current = null;
+        setEvolutionPending(false);
+        setEvolutionTarget(pending.newStage);
+        setIsEvolving(true);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const reportKeystroke = useCallback(() => {
+    lastKeystrokeAt = Date.now();
+  }, []);
+
   // Feed always reads fresh from DB so concurrent calls don't clobber each other
   const feed = useCallback(
     (source: TokenSource, input: number, output: number, cache: number) => {
@@ -80,8 +126,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setRecentFeeds(getRecentFeeds(result.monster.id));
 
       if (result.evolved && result.newStage) {
-        setEvolutionTarget(result.newStage);
-        setIsEvolving(true);
+        const idle = Date.now() - lastKeystrokeAt > IDLE_THRESHOLD;
+        if (idle) {
+          // User is AFK — queue the evolution for when they return
+          pendingRef.current = { newStage: result.newStage };
+          setEvolutionPending(true);
+        } else {
+          setEvolutionTarget(result.newStage);
+          setIsEvolving(true);
+        }
       }
     },
     []
@@ -106,12 +159,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
         recentFeeds,
         isEvolving,
         evolutionTarget,
+        evolutionPending,
         daemonConnected,
         refresh,
         feed,
         nameMonster,
         setDaemonConnected,
         setEvolving: setIsEvolving,
+        reportKeystroke,
       }}
     >
       {children}
