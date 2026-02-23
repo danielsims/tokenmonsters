@@ -22,10 +22,10 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 4.0,
     baseHappinessRate: 1.5,
     forms: [
-      { stage: "egg", name: "Byteclaw Egg", description: "A jagged-shelled egg crackling with static.", evolvesAtLevel: 6 },
-      { stage: "hatchling", name: "Bytepup", description: "A scrappy little data-hunter.", evolvesAtLevel: 16 },
-      { stage: "prime", name: "Bytesnap", description: "Its jaws can shred corrupted packets.", evolvesAtLevel: 36 },
-      { stage: "apex", name: "Bytewrath", description: "A digital apex predator of terrifying power.", evolvesAtLevel: null },
+      { stage: "egg", name: "Jagged Egg", description: "A sharp-shelled egg crackling with static. Bites back if you hold it wrong.", evolvesAtLevel: 1 },
+      { stage: "hatchling", name: "Bytepup", description: "A scrappy little data-hunter. All teeth, no patience.", evolvesAtLevel: 6 },
+      { stage: "prime", name: "Bytesnap", description: "Its jaws shred corrupted packets. Loyal once fed, vicious when hungry.", evolvesAtLevel: 16 },
+      { stage: "apex", name: "Bytewrath", description: "A digital apex predator. Entire file systems go quiet when it hunts.", evolvesAtLevel: null },
     ],
   },
   {
