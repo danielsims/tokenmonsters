@@ -1,6 +1,7 @@
 import { useGame } from "../../game/context";
 import { getCurrentForm, getDisplayName } from "../../models/evolution";
 import { getLevel } from "../../models/level";
+import { t } from "../theme";
 
 export function Header() {
   const { monster, species } = useGame();
@@ -14,10 +15,10 @@ export function Header() {
         height={3}
         borderStyle="rounded"
         border
-        borderColor="#333355"
-        backgroundColor="#0d0d1a"
+        borderColor={t.border.muted}
+        backgroundColor={t.bg.base}
       >
-        <text fg="#666688">No monster</text>
+        <text fg={t.text.dim}>No monster</text>
       </box>
     );
   }
@@ -34,17 +35,17 @@ export function Header() {
       height={3}
       borderStyle="rounded"
       border
-      borderColor="#333355"
-      backgroundColor="#0d0d1a"
+      borderColor={t.border.muted}
+      backgroundColor={t.bg.base}
     >
       <box flexDirection="row" gap={2} alignItems="center">
         <text>
-          <strong fg="#ffffff">{displayName}</strong>
+          <strong fg={t.text.primary}>{displayName}</strong>
         </text>
       </box>
       <box flexDirection="row" gap={2} alignItems="center">
-        <text fg="#ffdd44">Lv.{level}</text>
-        <text fg="#aaaacc">{form?.name ?? monster.stage}</text>
+        <text fg={t.accent.primary}>Lv.{level}</text>
+        <text fg={t.text.secondary}>{form?.name ?? monster.stage}</text>
       </box>
     </box>
   );
