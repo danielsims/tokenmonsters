@@ -30,14 +30,14 @@ const STARTER_SPECIES: Species[] = [
   },
   {
     id: "whisperscale",
-    description: "A shy, serpentine creature that grows stronger with cache hits. Rarely seen in the wild.",
+    description: "A shy, serpentine creature that slips between memory addresses. Grows stronger with cache hits. Rarely seen in the wild.",
     rarity: "uncommon",
     baseHungerRate: 2.0,
     baseHappinessRate: 3.5,
     forms: [
-      { stage: "egg", name: "Whisperscale Egg", description: "An egg that hums at frequencies only caches can hear.", evolvesAtLevel: 6 },
-      { stage: "hatchling", name: "Whispling", description: "A delicate serpentine hatchling.", evolvesAtLevel: 16 },
-      { stage: "prime", name: "Whispera", description: "Its scales shimmer with cached memories.", evolvesAtLevel: null },
+      { stage: "egg", name: "Hollow Egg", description: "Feels empty. Press your ear to it and you'll hear cached whispers.", evolvesAtLevel: 6 },
+      { stage: "hatchling", name: "Slink", description: "A translucent serpent that slips between memory addresses. Blink and it's gone.", evolvesAtLevel: 16 },
+      { stage: "prime", name: "Cachefang", description: "Its bite injects cached memories. Silent, precise, and impossible to find twice.", evolvesAtLevel: null },
     ],
   },
   {
