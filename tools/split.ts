@@ -5,6 +5,9 @@
  *
  * Usage: bun run tools/split.ts <input.glb> [--out <dir>] [--clusters <n>]
  *
+ * If --clusters is omitted, the script auto-detects the number of instances
+ * by analysing density gaps along the X axis.
+ *
  * The script:
  * 1. Parses the GLB binary directly (no Three.js dependency)
  * 2. Reads indices, positions, normals, and UVs from the single mesh
@@ -21,13 +24,15 @@ import { resolve, basename, extname } from "path";
 const args = process.argv.slice(2);
 let inputPath = "";
 let outDir = resolve(process.cwd(), "tools/out");
-let numClusters = 3;
+let numClusters = 0; // 0 = auto-detect
+let clustersExplicit = false;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--out" && args[i + 1]) {
     outDir = resolve(process.cwd(), args[++i]);
   } else if (args[i] === "--clusters" && args[i + 1]) {
     numClusters = parseInt(args[++i], 10);
+    clustersExplicit = true;
   } else if (!args[i].startsWith("--")) {
     inputPath = args[i];
   }
@@ -43,7 +48,7 @@ const modelName = basename(glbPath, extname(glbPath));
 
 console.log("Input:    " + glbPath);
 console.log("Output:   " + outDir);
-console.log("Clusters: " + numClusters);
+console.log("Clusters: " + (clustersExplicit ? numClusters : "auto-detect"));
 console.log("");
 
 // ─── Parse GLB ───────────────────────────────────────────────────────────────
@@ -229,69 +234,148 @@ for (let i = 0; i < numBins; i++) {
   smoothed[i] = sum / cnt;
 }
 
-// Find cut points: the numClusters-1 lowest-density bins, constrained:
-//   - Not in the outer 10% of the range (avoid edge effects)
-//   - At least 15% of range apart from each other
+// Find cut points by detecting true density valleys (gaps between models).
+// A valley is a local minimum where density drops below a threshold relative
+// to the peak density. This auto-detects the number of clusters when not
+// explicitly specified via --clusters.
+
 const margin = Math.floor(numBins * 0.10);
 const minSeparation = Math.floor(numBins * 0.15);
 
-const candidates: Array<{ bin: number; density: number }> = [];
+// Find peak density (excluding margins) as reference
+let peakDensity = 0;
 for (let i = margin; i < numBins - margin; i++) {
-  candidates.push({ bin: i, density: smoothed[i] });
+  if (smoothed[i] > peakDensity) peakDensity = smoothed[i];
 }
-candidates.sort((a, b) => a.density - b.density);
 
-// Greedily pick lowest-density bins with minimum separation
-const cutBins: number[] = [];
-for (const cand of candidates) {
-  if (cutBins.length >= numClusters - 1) break;
-  if (!cutBins.some((b) => Math.abs(b - cand.bin) < minSeparation)) {
-    cutBins.push(cand.bin);
+// Auto-detect: find gaps where density drops to near-zero across a wide enough
+// region. Real gaps between separate models have virtually no vertices — sparse
+// areas within a single mesh (e.g. between limbs) still have significant density.
+// We require: density < 1% of peak AND the gap spans at least 3% of the range.
+if (!clustersExplicit) {
+  const gapThreshold = peakDensity * 0.01;
+  const minGapWidth = Math.floor(numBins * 0.03);
+  const gaps: Array<{ center: number; density: number; width: number }> = [];
+
+  let inGap = false;
+  let gapStart = 0;
+  let gapMinDensity = Infinity;
+  let gapMinBin = 0;
+
+  for (let i = margin; i < numBins - margin; i++) {
+    if (smoothed[i] <= gapThreshold) {
+      if (!inGap) {
+        inGap = true;
+        gapStart = i;
+        gapMinDensity = smoothed[i];
+        gapMinBin = i;
+      } else if (smoothed[i] < gapMinDensity) {
+        gapMinDensity = smoothed[i];
+        gapMinBin = i;
+      }
+    } else if (inGap) {
+      const width = i - gapStart;
+      if (width >= minGapWidth) {
+        gaps.push({ center: gapMinBin, density: gapMinDensity, width });
+      }
+      inGap = false;
+      gapMinDensity = Infinity;
+    }
+  }
+  if (inGap) {
+    const width = (numBins - margin) - gapStart;
+    if (width >= minGapWidth) {
+      gaps.push({ center: gapMinBin, density: gapMinDensity, width });
+    }
+  }
+
+  // Filter gaps that are too close together (keep the deeper one)
+  const filteredGaps: Array<{ center: number; density: number; width: number }> = [];
+  for (const gap of gaps) {
+    const tooClose = filteredGaps.findIndex((g) => Math.abs(g.center - gap.center) < minSeparation);
+    if (tooClose >= 0) {
+      if (gap.density < filteredGaps[tooClose].density) {
+        filteredGaps[tooClose] = gap;
+      }
+    } else {
+      filteredGaps.push(gap);
+    }
+  }
+
+  numClusters = filteredGaps.length + 1;
+  console.log("Auto-detected " + numClusters + " cluster(s) from density histogram");
+  for (const gap of filteredGaps) {
+    console.log("  gap at bin " + gap.center + " width=" + gap.width + " density=" + gap.density.toFixed(0));
   }
 }
-cutBins.sort((a, b) => a - b);
 
-const cutPoints = cutBins.map((bin) => globalMinX + (bin + 0.5) / numBins * xRange);
-console.log("Density valley cuts: " + cutPoints.map((c) => c.toFixed(4)).join(", "));
-for (const bin of cutBins) {
-  console.log(
-    "  bin " + bin + "/" + numBins + " density=" + smoothed[bin].toFixed(0) +
-    " (X=" + (globalMinX + (bin + 0.5) / numBins * xRange).toFixed(4) + ")"
-  );
-}
-
-// Assign each island by MAJORITY VOTE: count how many of the island's vertices
-// fall on each side of the cut lines, and assign to the segment with the most.
-// This prevents a cut line from splitting an island that straddles the boundary.
+const cutBins: number[] = [];
+const cutPoints: number[] = [];
 const assignments = new Int32Array(islands.length);
 const islandToCluster = new Map<number, number>();
 
-// Build per-island vertex-to-segment vote counts
-const islandSegmentVotes = new Map<number, Int32Array>(); // root -> votes per segment
-for (let v = 0; v < vertCount; v++) {
-  const root = find(v);
-  if (!islandSegmentVotes.has(root)) {
-    islandSegmentVotes.set(root, new Int32Array(numClusters));
+if (numClusters <= 1) {
+  // Single model — no cuts needed, assign everything to cluster 0
+  numClusters = 1;
+  console.log("Single cluster — skipping density valley cuts");
+  for (let i = 0; i < islands.length; i++) {
+    assignments[i] = 0;
+    islandToCluster.set(islands[i].root, 0);
   }
-  const x = positions[v * 3];
-  let seg = 0;
-  for (const cut of cutPoints) {
-    if (x >= cut) seg++;
+} else {
+  const candidates: Array<{ bin: number; density: number }> = [];
+  for (let i = margin; i < numBins - margin; i++) {
+    candidates.push({ bin: i, density: smoothed[i] });
   }
-  islandSegmentVotes.get(root)![seg]++;
-}
+  candidates.sort((a, b) => a.density - b.density);
 
-for (let i = 0; i < islands.length; i++) {
-  const votes = islandSegmentVotes.get(islands[i].root)!;
-  let bestSeg = 0, bestCount = 0;
-  for (let s = 0; s < numClusters; s++) {
-    if (votes[s] > bestCount) {
-      bestCount = votes[s];
-      bestSeg = s;
+  // Greedily pick lowest-density bins with minimum separation
+  for (const cand of candidates) {
+    if (cutBins.length >= numClusters - 1) break;
+    if (!cutBins.some((b) => Math.abs(b - cand.bin) < minSeparation)) {
+      cutBins.push(cand.bin);
     }
   }
-  assignments[i] = bestSeg;
-  islandToCluster.set(islands[i].root, bestSeg);
+  cutBins.sort((a, b) => a - b);
+
+  cutPoints.push(...cutBins.map((bin) => globalMinX + (bin + 0.5) / numBins * xRange));
+  console.log("Density valley cuts: " + cutPoints.map((c) => c.toFixed(4)).join(", "));
+  for (const bin of cutBins) {
+    console.log(
+      "  bin " + bin + "/" + numBins + " density=" + smoothed[bin].toFixed(0) +
+      " (X=" + (globalMinX + (bin + 0.5) / numBins * xRange).toFixed(4) + ")"
+    );
+  }
+
+  // Assign each island by MAJORITY VOTE: count how many of the island's vertices
+  // fall on each side of the cut lines, and assign to the segment with the most.
+  // This prevents a cut line from splitting an island that straddles the boundary.
+  const islandSegmentVotes = new Map<number, Int32Array>(); // root -> votes per segment
+  for (let v = 0; v < vertCount; v++) {
+    const root = find(v);
+    if (!islandSegmentVotes.has(root)) {
+      islandSegmentVotes.set(root, new Int32Array(numClusters));
+    }
+    const x = positions[v * 3];
+    let seg = 0;
+    for (const cut of cutPoints) {
+      if (x >= cut) seg++;
+    }
+    islandSegmentVotes.get(root)![seg]++;
+  }
+
+  for (let i = 0; i < islands.length; i++) {
+    const votes = islandSegmentVotes.get(islands[i].root)!;
+    let bestSeg = 0, bestCount = 0;
+    for (let s = 0; s < numClusters; s++) {
+      if (votes[s] > bestCount) {
+        bestCount = votes[s];
+        bestSeg = s;
+      }
+    }
+    assignments[i] = bestSeg;
+    islandToCluster.set(islands[i].root, bestSeg);
+  }
 }
 
 // Report cluster stats
