@@ -60,10 +60,10 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 5.0,
     baseHappinessRate: 4.0,
     forms: [
-      { stage: "egg", name: "Nullwyrm Egg", description: "An egg that seems to absorb light.", evolvesAtLevel: 6 },
-      { stage: "hatchling", name: "Nullite", description: "A small dragon wreathed in null-space.", evolvesAtLevel: 20 },
-      { stage: "prime", name: "Nulldrake", description: "Void energy coils around its growing form.", evolvesAtLevel: 42 },
-      { stage: "apex", name: "Nullvoid", description: "A dragon of pure void. Reality bends around it.", evolvesAtLevel: null },
+      { stage: "egg", name: "Absent Egg", description: "An egg that shouldn't exist. It absorbs light and returns nothing.", evolvesAtLevel: 6 },
+      { stage: "hatchling", name: "Segfault", description: "A small, glitchy dragon. Things crash in its presence.", evolvesAtLevel: 20 },
+      { stage: "prime", name: "Voidmaw", description: "Void energy pours from its jaws. Memory corrupts at its touch.", evolvesAtLevel: 42 },
+      { stage: "apex", name: "Nullvoid", description: "A void mage that rewrites reality. Its spells are segfaults, its staff a dangling pointer.", evolvesAtLevel: null },
     ],
   },
 ];
