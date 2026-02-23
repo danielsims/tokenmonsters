@@ -11,7 +11,8 @@
     },
     "bytewrath": {
       "background": "96a2bb",
-      "targetHeight": 1.7
+      "targetHeight": 1.7,
+      "yOffset": 0.5
     },
     "byteclaw-egg": {
       "background": "96a2bb",
