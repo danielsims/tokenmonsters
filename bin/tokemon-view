@@ -38,7 +38,7 @@ usage() {
   echo "Usage: tokemon-view <model>          (in a capable terminal)"
   echo "       tokemon-view --launch <model> (spawns Ghostty window)"
   echo ""
-  echo "Available models: pikachu, bulbasaur"
+  echo "Available models: qwerty, daemon"
   exit 1
 }
 
@@ -48,16 +48,19 @@ resolve_model() {
   local file="$DIR/src/${name}-test.tsx"
   if [ ! -f "$file" ]; then
     echo "Error: Unknown model '${name}'"
-    echo "Available models: pikachu, bulbasaur"
     exit 1
   fi
   echo "$file"
 }
 
 # ── Main ──────────────────────────────────────────────────────────────
+FORCE=0
 if [ "$1" = "--launch" ]; then
   [ -z "$2" ] && usage
   launch_in_ghostty "$@"
+elif [ "$1" = "--force" ]; then
+  FORCE=1
+  shift
 fi
 
 MODEL="${1:-}"
@@ -65,14 +68,14 @@ MODEL="${1:-}"
 
 MODEL_FILE="$(resolve_model "$MODEL")"
 
-if is_tier1 || [ "${TOKEMON_WINDOW:-}" = "1" ]; then
+if [ "$FORCE" = "1" ] || is_tier1 || [ "${TOKEMON_WINDOW:-}" = "1" ]; then
   exec "$BUN" run "$MODEL_FILE"
 else
-  echo "Your terminal doesn't support Token Monsters' 3D rendering."
+  echo "Token Monsters requires a GPU-accelerated terminal emulator for 3D rendering."
   echo ""
-  echo "Recommended terminals: Ghostty, Alacritty, Kitty, WezTerm"
+  echo "Supported terminals: Ghostty, Alacritty, Kitty, WezTerm"
   echo ""
-  echo "Or run with --launch to open in a Ghostty window:"
-  echo "  tokemon-view --launch ${MODEL}"
+  echo "  tokemon-view --force <model>    Run anyway in the current terminal"
+  echo "  tokemon-view --launch <model>   Open in a new Ghostty window"
   exit 1
 fi
