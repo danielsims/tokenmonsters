@@ -3,6 +3,7 @@ import { getTargetStage } from "../models/evolution";
 import { getLevel } from "../models/level";
 import { calculateFeedResult, applyFeed, type FeedResult } from "./feeding";
 import { updateMonster, recordTokenFeed, recordEvolution } from "../db/queries";
+import { playSound } from "../audio/player";
 
 /** How often the game tick runs (ms) */
 export const TICK_INTERVAL = 30_000; // 30 seconds
@@ -57,6 +58,9 @@ export function feedMonster(
 ): { monster: Monster; feedResult: FeedResult; evolved: boolean; newStage?: Stage } {
   const feedResult = calculateFeedResult(inputTokens, outputTokens, cacheTokens, source);
   let updated = applyFeed(monster, feedResult);
+
+  // Play feed sound (off by default, user can enable)
+  playSound("feed");
 
   // Record the feed
   recordTokenFeed({
