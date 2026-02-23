@@ -1,11 +1,14 @@
 import { useGame } from "../../game/context";
+import { getSetting } from "../../db/queries";
+import { t, getThemeName } from "../theme";
 
 export function StatusBar() {
-  const { daemonConnected } = useGame();
+  const { daemonConnected, evolutionPending } = useGame();
+  const muted = getSetting("sound_mute") === "on";
 
   const connStatus = daemonConnected
-    ? "\u{1f7e2} Daemon connected"
-    : "\u{1f534} Daemon offline";
+    ? ">> Daemon connected"
+    : "-- Daemon offline";
 
   return (
     <box
@@ -13,14 +16,20 @@ export function StatusBar() {
       justifyContent="space-between"
       paddingX={2}
       height={1}
-      backgroundColor="#0d0d1a"
+      backgroundColor={t.bg.base}
     >
-      <text fg="#555577">
-        [i] Info  [r] Registry  [q] Quit
+      <text fg={t.text.dim}>
+        [i] Info  [r] Registry  [t] Theme  [m] {muted ? "Unmute" : "Mute"}  [q] Quit
       </text>
-      <text fg={daemonConnected ? "#44aa44" : "#aa4444"}>
-        {connStatus}
-      </text>
+      <box flexDirection="row" gap={2}>
+        {evolutionPending && (
+          <text fg={t.stat.evolve}>Evolution pending...</text>
+        )}
+        <text fg={t.text.dim}>{getThemeName()}</text>
+        <text fg={daemonConnected ? t.status.ok : t.status.error}>
+          {connStatus}
+        </text>
+      </box>
     </box>
   );
 }
