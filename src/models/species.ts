@@ -4,15 +4,15 @@ import type { Species, EvolutionForm } from "./types";
 const STARTER_SPECIES: Species[] = [
   {
     id: "glimmer",
-    description: "A luminous creature born from the glow of countless prompts. Its body pulses with soft light.",
+    description: "A luminous creature born from the glow of countless terminal prompts. Its body pulses with soft light.",
     rarity: "common",
     baseHungerRate: 3.0,
     baseHappinessRate: 2.0,
     forms: [
-      { stage: "egg", name: "Glimmer Egg", description: "A softly glowing egg.", evolvesAtLevel: 6 },
-      { stage: "hatchling", name: "Glimlet", description: "A tiny spark of living light.", evolvesAtLevel: 16 },
-      { stage: "prime", name: "Glimmora", description: "Radiant tendrils of luminous energy.", evolvesAtLevel: 36 },
-      { stage: "apex", name: "Glimmarion", description: "A blazing beacon that illuminates the void.", evolvesAtLevel: null },
+      { stage: "egg", name: "Dim Egg", description: "A barely-glowing egg. Hold it to a dark screen and it pulses.", evolvesAtLevel: 6 },
+      { stage: "hatchling", name: "Flicker", description: "An unstable little light that blinks in and out of visibility.", evolvesAtLevel: 16 },
+      { stage: "prime", name: "Luminos", description: "A steady beam of living light. Illuminates corrupted sectors wherever it drifts.", evolvesAtLevel: 36 },
+      { stage: "apex", name: "Phosphor", description: "A blazing relic of CRT glory. Its glow burns permanent afterimages.", evolvesAtLevel: null },
     ],
   },
   {
