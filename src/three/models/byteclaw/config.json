@@ -2,13 +2,20 @@
   "background": "96a2bb",
   "forms": {
     "bytepup": {
-      "background": "96a2bb"
+      "background": "96a2bb",
+      "targetHeight": 1.1
     },
     "bytesnap": {
-      "background": "96a2bb"
+      "background": "96a2bb",
+      "targetHeight": 1.0
     },
     "bytewrath": {
-      "background": "96a2bb"
+      "background": "96a2bb",
+      "targetHeight": 1.7
+    },
+    "byteclaw-egg": {
+      "background": "96a2bb",
+      "targetHeight": 0.7
     }
   }
 }

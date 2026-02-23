@@ -8,8 +8,9 @@ import { InfoScreen } from "./ui/screens/InfoScreen";
 import { HatchScreen } from "./ui/screens/HatchScreen";
 import { EvolveScreen } from "./ui/screens/EvolveScreen";
 import { WelcomeScreen } from "./ui/screens/WelcomeScreen";
+import { RegistryScreen } from "./ui/screens/RegistryScreen";
 
-type Screen = "welcome" | "home" | "info" | "hatch" | "evolve";
+type Screen = "welcome" | "home" | "info" | "hatch" | "evolve" | "registry";
 
 function AppInner() {
   const renderer = useRenderer();
@@ -56,6 +57,10 @@ function AppInner() {
     if (key.name === "i" || key.name === "tab") {
       setScreen((s) => (s === "info" ? "home" : "info"));
     }
+
+    if (key.name === "r") {
+      setScreen((s) => (s === "registry" ? "home" : "registry"));
+    }
   });
 
   switch (screen) {
@@ -69,6 +74,8 @@ function AppInner() {
       return <HatchScreen onComplete={handleEvolveComplete} />;
     case "evolve":
       return <EvolveScreen onComplete={handleEvolveComplete} />;
+    case "registry":
+      return <RegistryScreen />;
   }
 }
 

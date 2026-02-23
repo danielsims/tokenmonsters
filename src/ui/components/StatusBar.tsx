@@ -16,7 +16,7 @@ export function StatusBar() {
       backgroundColor="#0d0d1a"
     >
       <text fg="#555577">
-        [i] Info  [q] Quit
+        [i] Info  [r] Registry  [q] Quit
       </text>
       <text fg={daemonConnected ? "#44aa44" : "#aa4444"}>
         {connStatus}

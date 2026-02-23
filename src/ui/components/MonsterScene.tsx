@@ -23,6 +23,10 @@ const modelsRoot = resolve(import.meta.dir, "../../three/models");
 
 interface SpeciesConfig {
   background?: number;
+  targetHeight?: number;
+  cameraDistance?: number;
+  cameraHeight?: number;
+  lookAtHeight?: number;
 }
 
 function getGlbModel(species: Species | null, stage: Stage): string | null {
@@ -40,13 +44,19 @@ function loadFormConfig(speciesId: string, formName: string): SpeciesConfig {
     const configPath = resolve(modelsRoot, speciesId, "config.json");
     if (!existsSync(configPath)) return {};
     const raw = JSON.parse(require("fs").readFileSync(configPath, "utf-8"));
-    // Per-form background takes priority, then species-level fallback
-    const formBg = raw.forms?.[formName]?.background;
-    const speciesBg = raw.background;
-    const bg = formBg ?? speciesBg;
-    return {
-      background: bg != null ? parseInt(String(bg), 16) : undefined,
-    };
+    const formData = raw.forms?.[formName] ?? {};
+    const bg = formData.background ?? raw.background;
+    const config: SpeciesConfig = {};
+    if (bg != null) config.background = parseInt(String(bg), 16);
+    const th = formData.targetHeight ?? raw.targetHeight;
+    const cd = formData.cameraDistance ?? raw.cameraDistance;
+    const ch = formData.cameraHeight ?? raw.cameraHeight;
+    const lh = formData.lookAtHeight ?? raw.lookAtHeight;
+    if (th != null) config.targetHeight = th;
+    if (cd != null) config.cameraDistance = cd;
+    if (ch != null) config.cameraHeight = ch;
+    if (lh != null) config.lookAtHeight = lh;
+    return config;
   } catch {
     return {};
   }
@@ -85,8 +95,6 @@ export function MonsterScene() {
     return loadGlbTestScene(glbPath, {
       targetHeight: 1.4,
       cameraDistance: 3.2,
-      cameraHeight: -2.0,
-      lookAtHeight: -2.0,
       orbitSpeed: 0.3,
       ...speciesConfig,
     });
@@ -94,7 +102,14 @@ export function MonsterScene() {
 
   useEffect(() => {
     if (!glbScene) { setGlbReady(false); return; }
-    glbScene.ready.then(() => setGlbReady(true)).catch(() => setGlbReady(false));
+    let cancelled = false;
+    setGlbReady(false);
+    glbScene.ready.then(() => {
+      if (!cancelled) setGlbReady(true);
+    }).catch(() => {
+      if (!cancelled) setGlbReady(false);
+    });
+    return () => { cancelled = true; };
   }, [glbScene]);
 
   const sceneData = useMemo(() => {
@@ -115,6 +130,14 @@ export function MonsterScene() {
   const wobbleIntensity = monster?.stage === "egg" ? Math.max(0, (progress - 50) / 50) : 0;
 
   const isGlb = !!(glbScene && glbReady);
+
+  // Capture the initial camera distance (only read once per scene, stored in ref)
+  const baseCameraDistRef = useRef(3.2);
+  useEffect(() => {
+    if (sceneData) {
+      baseCameraDistRef.current = sceneData.camera.position.z;
+    }
+  }, [sceneData]);
 
   // Arrow key rotation — pauses auto-spin for 1.5s, resumes from current position
   useKeyboard((key) => {
@@ -138,16 +161,26 @@ export function MonsterScene() {
       if (!sceneData) return;
       const dt = deltaTime / 1000;
       timeRef.current += dt;
+
+      // On very wide viewports, push camera back to keep model visually contained
+      const MAX_ASPECT = 1.2;
+      const aspect = sceneData.camera.aspect;
+      const aspectScale = aspect > MAX_ASPECT ? aspect / MAX_ASPECT : 1;
+
+      const baseDist = baseCameraDistRef.current;
+
       if (monster?.stage === "egg") {
+        sceneData.camera.position.z = baseDist * aspectScale;
         (sceneData as any).update(timeRef.current, wobbleIntensity);
       } else if (isGlb) {
         const d = dragRef.current;
         const paused = Date.now() - d.lastInteraction < PAUSE_MS;
         // While paused, accumulate skipped time so orbit resumes in place
         if (paused) d.pauseAccum += dt;
-        sceneData.camera.position.z = 3.2 + d.zoom;
+        sceneData.camera.position.z = baseDist * aspectScale + d.zoom;
         (sceneData as any).update(timeRef.current - d.pauseAccum, d.rotation);
       } else {
+        sceneData.camera.position.z = baseDist * aspectScale;
         (sceneData as any).update(timeRef.current);
       }
     },
@@ -163,12 +196,15 @@ export function MonsterScene() {
   }
 
   return (
-    <threeScene
-      scene={sceneData.scene}
-      camera={sceneData.camera}
-      autoAspect
-      flexGrow={1}
-      renderBefore={renderBefore}
-    />
+    <box flexGrow={1}>
+      <threeScene
+        scene={sceneData.scene}
+        camera={sceneData.camera}
+        autoAspect
+        flexGrow={1}
+        width="100%"
+        renderBefore={renderBefore}
+      />
+    </box>
   );
 }

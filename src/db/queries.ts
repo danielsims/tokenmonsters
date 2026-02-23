@@ -34,6 +34,27 @@ function rowToSpecies(row: any): Species {
   };
 }
 
+export function getOwnedSpeciesIds(): Set<string> {
+  const db = getDatabase();
+  const rows = db.query("SELECT DISTINCT species_id FROM monsters").all() as any[];
+  return new Set(rows.map((r) => r.species_id));
+}
+
+/** Returns the highest evolution stage reached per species */
+export function getOwnedSpeciesStages(): Map<string, Stage> {
+  const db = getDatabase();
+  const rows = db.query("SELECT species_id, stage FROM monsters").all() as any[];
+  const order: Stage[] = ["egg", "hatchling", "prime", "apex"];
+  const map = new Map<string, Stage>();
+  for (const row of rows) {
+    const current = map.get(row.species_id);
+    if (!current || order.indexOf(row.stage as Stage) > order.indexOf(current)) {
+      map.set(row.species_id, row.stage as Stage);
+    }
+  }
+  return map;
+}
+
 // --- Monsters ---
 
 export function getMonster(id: string): Monster | null {
