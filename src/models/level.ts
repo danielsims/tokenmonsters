@@ -1,23 +1,24 @@
-/** XP required to reach a given level: floor(n^2.5 * 170000)
+/** XP curve: egg hatches at 1.5M tokens, then level N costs N * 1M tokens.
  *
- * Milestone reference (XP ≈ total tokens consumed):
- *   Lv.6  (hatch)  ~15M
- *   Lv.16 (prime)  ~174M
- *   Lv.20          ~304M
- *   Lv.36 (apex)   ~1.3B
- *   Lv.42          ~1.9B
- *   Lv.100         ~17B
+ * Formula: XP(N) = 500_000 * (N² + N + 1) for N >= 1, XP(0) = 0
+ *
+ * Milestone reference (cumulative tokens):
+ *   Lv.1  (hatch)      1.5M
+ *   Lv.6  (evolve 1)   21.5M
+ *   Lv.16 (evolve 2)   ~137M
+ *   Lv.50              ~1.3B
+ *   Lv.100             ~5B
  */
 export function getXpForLevel(level: number): number {
-  if (level <= 1) return 0;
-  return Math.floor(Math.pow(level, 2.5) * 170_000);
+  if (level <= 0) return 0;
+  return 500_000 * (level * level + level + 1);
 }
 
 /** Get the current level for a given XP amount */
 export function getLevel(xp: number): number {
-  if (xp <= 0) return 1;
+  if (xp <= 0) return 0;
   // Binary search for the highest level where xpForLevel(n) <= xp
-  let lo = 1;
+  let lo = 0;
   let hi = 100;
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
