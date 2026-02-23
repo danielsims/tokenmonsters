@@ -64,7 +64,7 @@ export default defineConfig({
               console.log("[process] Running split on " + filename + " (" + (body.length / 1024 / 1024).toFixed(1) + " MB)");
 
               // Run split
-              execSync("bun run tools/split.ts " + JSON.stringify(inputPath) + " --clusters 3 --out " + JSON.stringify(outDir), {
+              execSync("bun run tools/split.ts " + JSON.stringify(inputPath) + " --out " + JSON.stringify(outDir), {
                 cwd: projectRoot,
                 stdio: "pipe",
                 timeout: 120000,
