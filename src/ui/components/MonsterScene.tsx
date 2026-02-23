@@ -7,10 +7,11 @@ import { createEggScene } from "../../three/scenes/egg";
 import { createHatchlingScene } from "../../three/scenes/hatchling";
 import { createJuvenileScene } from "../../three/scenes/juvenile";
 import { createAdultScene } from "../../three/scenes/adult";
-import { loadGlbTestScene } from "../../three/glb-loader";
+import { loadGlbTestScene, updateSceneBackground } from "../../three/glb-loader";
 import { resolve } from "path";
 import { existsSync } from "fs";
 import type { Species, Stage } from "../../models/types";
+import { t, getSceneBg } from "../theme";
 
 /**
  * Model directory layout:
@@ -100,6 +101,7 @@ export function MonsterScene() {
       cameraDistance: 3.2,
       orbitSpeed: 0.3,
       ...speciesConfig,
+      background: getSceneBg(),
     });
   }, [glbPath, speciesConfig]);
 
@@ -129,6 +131,12 @@ export function MonsterScene() {
         return createAdultScene(traits);
     }
   }, [monster?.stage, traits, glbScene, glbReady]);
+
+  // Update scene background on theme change without rebuilding the scene
+  const sceneBg = getSceneBg();
+  useEffect(() => {
+    if (sceneData) updateSceneBackground(sceneData.scene, sceneBg);
+  }, [sceneData, sceneBg]);
 
   const wobbleIntensity = monster?.stage === "egg" ? Math.max(0, (progress - 50) / 50) : 0;
 
@@ -193,7 +201,7 @@ export function MonsterScene() {
   if (!monster || !species || !sceneData) {
     return (
       <box justifyContent="center" alignItems="center" flexGrow={1}>
-        <text fg="#666666">No monster yet...</text>
+        <text fg={t.text.muted}>No monster yet...</text>
       </box>
     );
   }
