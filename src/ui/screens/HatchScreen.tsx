@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useGame } from "../../game/context";
 import { getCurrentForm } from "../../models/evolution";
+import { t } from "../theme";
 
 const HATCH_FRAMES = [
   [
@@ -72,22 +73,22 @@ export function HatchScreen({ onComplete }: { onComplete: () => void }) {
       justifyContent="center"
       width="100%"
       height="100%"
-      backgroundColor="#0a0a1a"
+      backgroundColor={t.bg.base}
     >
-      <text fg="#ffdd44">{art}</text>
+      <text fg={t.accent.primary}>{art}</text>
       <box height={2} />
       {showMessage && (
         <box flexDirection="column" alignItems="center">
           <text>
-            <strong fg="#ffffff">Your egg has hatched!</strong>
+            <strong fg={t.text.primary}>Your egg has hatched!</strong>
           </text>
-          <text fg="#aaaacc">
-            A <strong fg="#ffdd44">{formName}</strong> has emerged!
+          <text fg={t.text.secondary}>
+            A <strong fg={t.accent.primary}>{formName}</strong> has emerged!
           </text>
         </box>
       )}
       {!showMessage && frame < HATCH_FRAMES.length - 1 && (
-        <text fg="#888888">The egg is cracking...</text>
+        <text fg={t.text.muted}>The egg is cracking...</text>
       )}
     </box>
   );
