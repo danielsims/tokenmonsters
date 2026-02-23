@@ -227,6 +227,29 @@ export interface GLBSceneResult {
   ready: Promise<void>;
 }
 
+/** Update a scene's gradient background without rebuilding the scene */
+export function updateSceneBackground(scene: THREE.Scene, background: number): void {
+  const bgBase = new THREE.Color(background);
+  const hsl = { h: 0, s: 0, l: 0 };
+  bgBase.getHSL(hsl);
+  const top = new THREE.Color().setHSL(hsl.h, hsl.s, Math.min(1, hsl.l * 1.3));
+  const bot = new THREE.Color().setHSL(hsl.h, hsl.s * 0.9, hsl.l * 0.5);
+  const h = 64;
+  const data = new Uint8Array(h * 4);
+  for (let y = 0; y < h; y++) {
+    const t = y / (h - 1);
+    data[y * 4]     = Math.round((bot.r + (top.r - bot.r) * t) * 255);
+    data[y * 4 + 1] = Math.round((bot.g + (top.g - bot.g) * t) * 255);
+    data[y * 4 + 2] = Math.round((bot.b + (top.b - bot.b) * t) * 255);
+    data[y * 4 + 3] = 255;
+  }
+  const tex = new THREE.DataTexture(data, 1, h, THREE.RGBAFormat);
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  scene.background = tex;
+}
+
 export function loadGlbTestScene(
   modelPath: string,
   options: {
@@ -238,6 +261,7 @@ export function loadGlbTestScene(
     orbitSpeed?: number;
     background?: number;
     showGround?: boolean;
+    yOffset?: number;
   } = {},
 ): GLBSceneResult {
   const {
