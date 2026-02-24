@@ -57,16 +57,35 @@ export function getOwnedSpeciesStages(): Map<number, Stage> {
 
 // --- Monsters ---
 
+export const PARTY_MAX = 10;
+
 export function getMonster(id: string): Monster | null {
   const db = getDatabase();
   const row = db.query("SELECT * FROM monsters WHERE id = ?").get(id) as any;
   return row ? rowToMonster(row) : null;
 }
 
+export function getAllMonsters(): Monster[] {
+  const db = getDatabase();
+  const rows = db.query("SELECT * FROM monsters ORDER BY created_at ASC").all() as any[];
+  return rows.map(rowToMonster);
+}
+
 export function getActiveMonster(): Monster | null {
   const db = getDatabase();
+  // Check for explicitly set active monster first
+  const activeId = getSetting("active_monster_id");
+  if (activeId) {
+    const row = db.query("SELECT * FROM monsters WHERE id = ?").get(activeId) as any;
+    if (row) return rowToMonster(row);
+  }
+  // Fall back to newest monster
   const row = db.query("SELECT * FROM monsters ORDER BY created_at DESC LIMIT 1").get() as any;
   return row ? rowToMonster(row) : null;
+}
+
+export function setActiveMonster(id: string): void {
+  setSetting("active_monster_id", id);
 }
 
 export function getMonsterCount(): number {
@@ -75,7 +94,8 @@ export function getMonsterCount(): number {
   return result.count;
 }
 
-export function createMonster(monster: Omit<Monster, "checksum">): Monster {
+export function createMonster(monster: Omit<Monster, "checksum">): Monster | null {
+  if (getMonsterCount() >= PARTY_MAX) return null;
   const db = getDatabase();
   const checksum = signMonster(monster);
   const full: Monster = { ...monster, checksum };

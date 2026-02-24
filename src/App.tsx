@@ -9,10 +9,11 @@ import { HatchScreen } from "./ui/screens/HatchScreen";
 import { EvolveScreen } from "./ui/screens/EvolveScreen";
 import { WelcomeScreen } from "./ui/screens/WelcomeScreen";
 import { RegistryScreen } from "./ui/screens/RegistryScreen";
+import { PartyScreen } from "./ui/screens/PartyScreen";
 import { getSetting, setSetting } from "./db/queries";
 import { cycleTheme, setTheme, getThemeName } from "./ui/theme";
 
-type Screen = "welcome" | "home" | "info" | "hatch" | "evolve" | "registry";
+type Screen = "welcome" | "home" | "info" | "hatch" | "evolve" | "registry" | "party";
 
 function AppInner() {
   const renderer = useRenderer();
@@ -76,6 +77,10 @@ function AppInner() {
       setScreen((s) => (s === "registry" ? "home" : "registry"));
     }
 
+    if (key.name === "p") {
+      setScreen((s) => (s === "party" ? "home" : "party"));
+    }
+
     if (key.name === "m") {
       const current = getSetting("sound_mute");
       setSetting("sound_mute", current === "on" ? "off" : "on");
@@ -102,6 +107,8 @@ function AppInner() {
       return <EvolveScreen onComplete={handleEvolveComplete} />;
     case "registry":
       return <RegistryScreen />;
+    case "party":
+      return <PartyScreen onSwitch={() => setScreen("home")} />;
   }
 }
 

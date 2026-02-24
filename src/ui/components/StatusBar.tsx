@@ -19,7 +19,7 @@ export function StatusBar() {
       backgroundColor={t.bg.base}
     >
       <text fg={t.text.dim}>
-        [i] Info  [r] Registry  [t] Theme  [m] {muted ? "Unmute" : "Mute"}  [q] Quit
+        [i] Info  [p] Party  [r] Registry  [t] Theme  [m] {muted ? "Unmute" : "Mute"}  [q] Quit
       </text>
       <box flexDirection="row" gap={2}>
         {evolutionPending && (

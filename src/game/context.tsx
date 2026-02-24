@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import type { Monster, Species, TokenFeed, TokenSource, Stage } from "../models/types";
-import { getActiveMonster, getMonster, getSpeciesById, getRecentFeeds, updateMonster } from "../db/queries";
+import { getActiveMonster, getMonster, getSpeciesById, getRecentFeeds, updateMonster, setActiveMonster } from "../db/queries";
 import { gameTick, feedMonster, TICK_INTERVAL } from "./engine";
-import { playSound } from "../audio/player";
+import { playSound, startAlert, stopAlert } from "../audio/player";
 
 /** How long without a keypress before we consider the user idle (ms) */
 const IDLE_THRESHOLD = 30_000;
@@ -25,6 +25,7 @@ interface GameActions {
   refresh: () => void;
   feed: (source: TokenSource, input: number, output: number, cache: number) => void;
   nameMonster: (name: string) => void;
+  switchMonster: (id: string) => void;
   setDaemonConnected: (connected: boolean) => void;
   setEvolving: (evolving: boolean) => void;
   reportKeystroke: () => void;
@@ -48,14 +49,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const pendingRef = useRef<PendingEvolution | null>(null);
   const [evolutionPending, setEvolutionPending] = useState(false);
 
-  // Play evolve sound when evolution screen fires
-  const prevEvolvingRef = useRef(false);
-  useEffect(() => {
-    if (isEvolving && !prevEvolvingRef.current) {
-      playSound("evolve");
-    }
-    prevEvolvingRef.current = isEvolving;
-  }, [isEvolving]);
 
   const refresh = useCallback(() => {
     const m = getActiveMonster();
@@ -97,7 +90,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!pendingRef.current) return;
       const timeSinceKeystroke = Date.now() - lastKeystrokeAt;
       if (timeSinceKeystroke < 2000) {
-        // User is back — fire the evolution
+        // User is back — stop alert and fire the evolution screen
+        stopAlert();
         const pending = pendingRef.current;
         pendingRef.current = null;
         setEvolutionPending(false);
@@ -125,10 +119,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setMonster(result.monster);
       setRecentFeeds(getRecentFeeds(result.monster.id));
 
+      if (result.leveledUp) {
+        playSound("level-up");
+      }
+
       if (result.evolved && result.newStage) {
         const idle = Date.now() - lastKeystrokeAt > IDLE_THRESHOLD;
         if (idle) {
-          // User is AFK — queue the evolution for when they return
+          // User is AFK — loop alert and queue the evolution screen
+          startAlert(30_000);
           pendingRef.current = { newStage: result.newStage };
           setEvolutionPending(true);
         } else {
@@ -151,6 +150,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const switchMonster = useCallback(
+    (id: string) => {
+      setActiveMonster(id);
+      refresh();
+    },
+    [refresh]
+  );
+
   return (
     <GameContext.Provider
       value={{
@@ -164,6 +171,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         refresh,
         feed,
         nameMonster,
+        switchMonster,
         setDaemonConnected,
         setEvolving: setIsEvolving,
         reportKeystroke,
