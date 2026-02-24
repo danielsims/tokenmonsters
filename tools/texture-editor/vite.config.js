@@ -13,26 +13,19 @@ export default defineConfig({
     {
       name: "texture-editor-api",
       configureServer(server) {
-        // GET /api/models — list all species + forms
+        // GET /api/models — list all forms (flat)
         server.middlewares.use("/api/models", (req, res, next) => {
           if (req.method !== "GET") { next(); return; }
           try {
-            const species = readdirSync(modelsDir, { withFileTypes: true })
-              .filter((d) => d.isDirectory())
-              .map((d) => {
-                const speciesDir = resolve(modelsDir, d.name);
-                const forms = readdirSync(speciesDir)
-                  .filter((f) => f.endsWith(".glb"))
-                  .map((f) => ({
-                    name: f.replace(/\.glb$/, ""),
-                    glbPath: "src/three/models/" + d.name + "/" + f,
-                  }));
-                return { species: d.name, forms };
-              })
-              .filter((s) => s.forms.length > 0);
+            const forms = readdirSync(modelsDir)
+              .filter((f) => f.endsWith(".glb"))
+              .map((f) => ({
+                name: f.replace(/\.glb$/, ""),
+                glbPath: "src/three/models/" + f,
+              }));
 
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify(species));
+            res.end(JSON.stringify(forms));
           } catch (err) {
             res.statusCode = 500;
             res.setHeader("Content-Type", "application/json");
@@ -40,18 +33,17 @@ export default defineConfig({
           }
         });
 
-        // GET /api/textures/:species/:form — extract textures from GLB
+        // GET /api/textures/:form — extract textures from GLB
         server.middlewares.use("/api/textures", (req, res, next) => {
           if (req.method !== "GET") { next(); return; }
-          const parts = req.url.replace(/^\//, "").split("/");
-          if (parts.length < 2) { next(); return; }
-          const [species, form] = parts;
-          const glbPath = resolve(modelsDir, species, form + ".glb");
+          const form = req.url.replace(/^\//, "").replace(/\/$/, "");
+          if (!form) { next(); return; }
+          const glbPath = resolve(modelsDir, form + ".glb");
 
           if (!existsSync(glbPath)) {
             res.statusCode = 404;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ error: "GLB not found: " + species + "/" + form }));
+            res.end(JSON.stringify({ error: "GLB not found: " + form }));
             return;
           }
 
@@ -78,16 +70,16 @@ export default defineConfig({
           req.on("data", (chunk) => (body += chunk));
           req.on("end", () => {
             try {
-              const { species, form, textureIndex, imageData } = JSON.parse(body);
+              const { form, textureIndex, imageData } = JSON.parse(body);
 
-              if (!species || !form || textureIndex === undefined || !imageData) {
+              if (!form || textureIndex === undefined || !imageData) {
                 res.statusCode = 400;
                 res.setHeader("Content-Type", "application/json");
-                res.end(JSON.stringify({ error: "Missing species, form, textureIndex, or imageData" }));
+                res.end(JSON.stringify({ error: "Missing form, textureIndex, or imageData" }));
                 return;
               }
 
-              const glbPath = resolve(modelsDir, species, form + ".glb");
+              const glbPath = resolve(modelsDir, form + ".glb");
               if (!existsSync(glbPath)) {
                 res.statusCode = 404;
                 res.setHeader("Content-Type", "application/json");
@@ -96,7 +88,7 @@ export default defineConfig({
               }
 
               // Backup
-              const backupDir = resolve(projectRoot, "tools/out/texture-backups", species);
+              const backupDir = resolve(projectRoot, "tools/out/texture-backups");
               if (!existsSync(backupDir)) mkdirSync(backupDir, { recursive: true });
               const ts = new Date().toISOString().replace(/[-:T]/g, (m) => m === "T" ? "_" : "").slice(0, 15);
               const backupPath = resolve(backupDir, form + "_" + ts + ".glb");
@@ -116,9 +108,9 @@ export default defineConfig({
                 { cwd: projectRoot, timeout: 30000 }
               );
 
-              const relBackup = "tools/out/texture-backups/" + species + "/" + form + "_" + ts + ".glb";
+              const relBackup = "tools/out/texture-backups/" + form + "_" + ts + ".glb";
               console.log("[save] Backed up to " + relBackup);
-              console.log("[save] Embedded texture " + textureIndex + " into " + species + "/" + form + ".glb");
+              console.log("[save] Embedded texture " + textureIndex + " into " + form + ".glb");
 
               res.setHeader("Content-Type", "application/json");
               res.end(JSON.stringify({ ok: true, backup: relBackup }));
@@ -131,7 +123,7 @@ export default defineConfig({
           });
         });
 
-        // Serve GLB files from models dir: /models/:species/:form.glb
+        // Serve GLB files from models dir: /models/:form.glb
         server.middlewares.use("/models", (req, res, next) => {
           const filePath = resolve(modelsDir, req.url.replace(/^\//, ""));
           if (existsSync(filePath) && filePath.endsWith(".glb")) {
@@ -144,11 +136,10 @@ export default defineConfig({
           }
         });
 
-        // Serve config.json for species
+        // Serve config.json
         server.middlewares.use("/api/config", (req, res, next) => {
-          const species = req.url.replace(/^\//, "").replace(/\/$/, "");
-          if (!species) { next(); return; }
-          const configPath = resolve(modelsDir, species, "config.json");
+          if (req.method !== "GET") { next(); return; }
+          const configPath = resolve(modelsDir, "config.json");
           if (existsSync(configPath)) {
             res.setHeader("Content-Type", "application/json");
             res.end(readFileSync(configPath, "utf-8"));

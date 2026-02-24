@@ -5,7 +5,6 @@ import { createEditor } from "./editor.js";
 import { createHdPreview, createPixelPreview } from "./preview.js";
 
 // ── DOM refs ──
-const speciesSelect = document.getElementById("species-select");
 const formSelect = document.getElementById("form-select");
 const textureSelect = document.getElementById("texture-select");
 const saveBtn = document.getElementById("save-btn");
@@ -16,7 +15,6 @@ const undoBtn = document.getElementById("undo-btn");
 const redoBtn = document.getElementById("redo-btn");
 
 // ── State ──
-let currentSpecies = "";
 let currentForm = "";
 let currentTextureIndex = 0;
 let texturesData = [];
@@ -146,41 +144,22 @@ hdPreview.enablePainting((u, v, action) => {
 
 // ── Model loading ──
 
-async function fetchModels() {
+async function loadFormList() {
   const resp = await fetch("/api/models");
-  return resp.json();
-}
+  const forms = await resp.json();
+  let config = {};
+  try {
+    const configResp = await fetch("/api/config");
+    config = await configResp.json();
+  } catch {}
 
-async function loadSpeciesList() {
-  const models = await fetchModels();
-
-  speciesSelect.innerHTML = '<option value="">Species...</option>';
-  for (const m of models) {
+  formSelect.innerHTML = '<option value="">Form...</option>';
+  for (const f of forms) {
     const opt = document.createElement("option");
-    opt.value = m.species;
-    opt.textContent = m.species;
-    speciesSelect.appendChild(opt);
+    opt.value = f.name;
+    opt.textContent = f.name;
+    formSelect.appendChild(opt);
   }
-
-  speciesSelect.addEventListener("change", () => {
-    currentSpecies = speciesSelect.value;
-    formSelect.innerHTML = '<option value="">Form...</option>';
-    formSelect.disabled = true;
-    textureSelect.innerHTML = '<option value="">Texture...</option>';
-    textureSelect.disabled = true;
-    saveBtn.disabled = true;
-
-    const species = models.find((m) => m.species === currentSpecies);
-    if (!species) return;
-
-    formSelect.disabled = false;
-    for (const f of species.forms) {
-      const opt = document.createElement("option");
-      opt.value = f.name;
-      opt.textContent = f.name;
-      formSelect.appendChild(opt);
-    }
-  });
 
   formSelect.addEventListener("change", async () => {
     currentForm = formSelect.value;
@@ -193,17 +172,14 @@ async function loadSpeciesList() {
     loadingEl.textContent = "Loading textures...";
 
     try {
-      // Fetch config for background color
-      const configResp = await fetch("/api/config/" + currentSpecies);
-      const config = await configResp.json();
-      const bg = config.forms?.[currentForm]?.background || config.background || "27272a";
+      const bg = config[currentForm]?.background || "27272a";
 
       // Init previews with background
       hdPreview.init(bg);
       pixelPreview.init(bg);
 
       // Load model into both previews
-      const glbUrl = "/models/" + currentSpecies + "/" + currentForm + ".glb";
+      const glbUrl = "/models/" + currentForm + ".glb";
       await hdPreview.loadModel(glbUrl);
       await pixelPreview.loadModel(glbUrl);
 
@@ -212,7 +188,7 @@ async function loadSpeciesList() {
       pixelPreview.resize();
 
       // Extract textures
-      const resp = await fetch("/api/textures/" + currentSpecies + "/" + currentForm);
+      const resp = await fetch("/api/textures/" + currentForm);
       texturesData = await resp.json();
 
       textureSelect.innerHTML = "";
@@ -295,7 +271,7 @@ function showSaveModal() {
 
   const info = document.createElement("div");
   info.style.cssText = "font-size:11px;color:#71717a;margin-bottom:16px;";
-  info.textContent = currentSpecies + "/" + currentForm + ".glb — texture " + currentTextureIndex;
+  info.textContent = currentForm + ".glb — texture " + currentTextureIndex;
   box.appendChild(info);
 
   // Buttons
@@ -347,7 +323,6 @@ async function doSave(btn) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        species: currentSpecies,
         form: currentForm,
         textureIndex: currentTextureIndex,
         imageData,
@@ -361,7 +336,7 @@ async function doSave(btn) {
       showToast("Saved. Backup at " + result.backup);
 
       // Reload model in previews to confirm
-      const glbUrl = "/models/" + currentSpecies + "/" + currentForm + ".glb?t=" + Date.now();
+      const glbUrl = "/models/" + currentForm + ".glb?t=" + Date.now();
       await hdPreview.loadModel(glbUrl);
       await pixelPreview.loadModel(glbUrl);
       saveBtn.disabled = true;
@@ -382,4 +357,4 @@ function showToast(msg) {
 }
 
 // ── Init ──
-loadSpeciesList();
+loadFormList();

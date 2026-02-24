@@ -27,11 +27,10 @@ export default defineConfig({
           }
         });
 
-        // GET /api/config/<species> — return existing config.json for a species
+        // GET /api/config — return config.json for all forms
         server.middlewares.use("/api/config", (req, res, next) => {
-          const species = req.url.replace(/^\//, "").replace(/\/$/, "");
-          if (!species) { next(); return; }
-          const configPath = resolve(modelsDir, species, "config.json");
+          if (req.method !== "GET") { next(); return; }
+          const configPath = resolve(modelsDir, "config.json");
           if (existsSync(configPath)) {
             res.setHeader("Content-Type", "application/json");
             res.end(readFileSync(configPath, "utf-8"));
@@ -118,9 +117,9 @@ export default defineConfig({
           });
         });
         // POST /api/finalize
-        // Body: { sourceFile, species, formName, background?, groundColor? }
-        // Copies GLB to: src/three/models/<species>/<formName>.glb
-        // Writes/merges: src/three/models/<species>/config.json
+        // Body: { sourceFile, formName, background? }
+        // Copies GLB to: src/three/models/<formName>.glb
+        // Writes/merges: src/three/models/config.json
         server.middlewares.use("/api/finalize", (req, res) => {
           if (req.method !== "POST") {
             res.statusCode = 405;
@@ -132,20 +131,20 @@ export default defineConfig({
           req.on("data", (chunk) => (body += chunk));
           req.on("end", () => {
             try {
-              const { sourceFile, species, formName, background } = JSON.parse(body);
+              const { sourceFile, formName, background } = JSON.parse(body);
 
-              if (!sourceFile || !species || !formName) {
+              if (!sourceFile || !formName) {
                 res.statusCode = 400;
                 res.setHeader("Content-Type", "application/json");
-                res.end(JSON.stringify({ error: "Missing sourceFile, species, or formName" }));
+                res.end(JSON.stringify({ error: "Missing sourceFile or formName" }));
                 return;
               }
 
               const namePattern = /^[a-z0-9_-]+$/;
-              if (!namePattern.test(species) || !namePattern.test(formName)) {
+              if (!namePattern.test(formName)) {
                 res.statusCode = 400;
                 res.setHeader("Content-Type", "application/json");
-                res.end(JSON.stringify({ error: "Names must be lowercase alphanumeric (a-z, 0-9, -, _)" }));
+                res.end(JSON.stringify({ error: "Form name must be lowercase alphanumeric (a-z, 0-9, -, _)" }));
                 return;
               }
 
@@ -163,32 +162,23 @@ export default defineConfig({
                 return;
               }
 
-              // Create species directory and copy GLB
-              const speciesDir = resolve(modelsDir, species);
-              if (!existsSync(speciesDir)) {
-                mkdirSync(speciesDir, { recursive: true });
-              }
-
-              const destPath = resolve(speciesDir, formName + ".glb");
+              // Copy GLB to flat models directory
+              const destPath = resolve(modelsDir, formName + ".glb");
               copyFileSync(actualSrc, destPath);
 
-              // Write/merge config.json with per-form background
-              const configPath = resolve(speciesDir, "config.json");
+              // Write/merge config.json with form config
+              const configPath = resolve(modelsDir, "config.json");
               let config = {};
               if (existsSync(configPath)) {
                 try { config = JSON.parse(readFileSync(configPath, "utf-8")); } catch {}
               }
               if (background) {
-                // Set species-level default if not already present
-                if (!config.background) config.background = background;
-                // Set per-form background
-                if (!config.forms) config.forms = {};
-                if (!config.forms[formName]) config.forms[formName] = {};
-                config.forms[formName].background = background;
+                if (!config[formName]) config[formName] = {};
+                config[formName].background = background;
               }
               writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
 
-              const relPath = "src/three/models/" + species + "/" + formName + ".glb";
+              const relPath = "src/three/models/" + formName + ".glb";
               console.log("[finalize] " + sourceFile + " -> " + relPath);
               if (background) console.log("[finalize] config.json background=" + background);
 
@@ -196,7 +186,6 @@ export default defineConfig({
               res.setHeader("Content-Type", "application/json");
               res.end(JSON.stringify({
                 ok: true,
-                species,
                 formName,
                 destPath,
                 relPath,

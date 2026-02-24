@@ -251,18 +251,18 @@ function selectViewport(vp) {
 }
 
 // ---------------------------------------------------------------------------
-// Species data (mirrors src/models/species.ts)
+// Form names (mirrors src/models/species.ts evolution forms)
 // ---------------------------------------------------------------------------
 
-const SPECIES = [
-  { id: "glimmer", forms: ["dim-egg", "flicker", "luminos", "phosphor"] },
-  { id: "byteclaw", forms: ["jagged-egg", "bytepup", "bytesnap", "bytewrath"] },
-  { id: "whisperscale", forms: ["hollow-egg", "slink", "cachefang"] },
-  { id: "sparkfin", forms: ["fizzing-egg", "fry", "volteel", "ampstorm"] },
-  { id: "nullwyrm", forms: ["absent-egg", "segfault", "voidmaw", "nullvoid"] },
-  { id: "qwerty", forms: ["qwerty-egg", "qwerty", "daemon"] },
-  { id: "kilobit", forms: ["dense-egg", "kilobit", "megabyte"] },
-  { id: "pinchy", forms: ["molting-egg", "pinchy", "viceclaw", "gigaclaw"] },
+const FORMS = [
+  "dim-egg", "flicker", "luminos", "phosphor",
+  "jagged-egg", "bytepup", "bytesnap", "bytewrath",
+  "hollow-egg", "slink", "cachefang",
+  "fizzing-egg", "fry", "volteel", "ampstorm",
+  "absent-egg", "segfault", "voidmaw", "nullvoid",
+  "qwerty-egg", "qwerty", "daemon",
+  "dense-egg", "megabyte", "gigabyte",
+  "molting-egg", "pinchy", "viceclaw", "gigaclaw",
 ];
 
 // ---------------------------------------------------------------------------
@@ -316,28 +316,6 @@ function showFinalizeModal(vp) {
   fileInfo.textContent = vp.sourceFile + (vp.fileSize ? " (" + formatBytes(vp.fileSize) + ")" : "");
   left.appendChild(fileInfo);
 
-  // Species
-  const speciesLabel = document.createElement("label");
-  speciesLabel.style.cssText = "font-size:12px;color:#a1a1aa;display:block;margin-bottom:6px;";
-  speciesLabel.textContent = "Species";
-  left.appendChild(speciesLabel);
-
-  const speciesSelect = document.createElement("select");
-  speciesSelect.style.cssText = selectStyle + "margin-bottom:14px;";
-  const defaultOpt = document.createElement("option");
-  defaultOpt.value = "";
-  defaultOpt.textContent = "Choose species...";
-  defaultOpt.disabled = true;
-  defaultOpt.selected = true;
-  speciesSelect.appendChild(defaultOpt);
-  for (const sp of SPECIES) {
-    const opt = document.createElement("option");
-    opt.value = sp.id;
-    opt.textContent = sp.id;
-    speciesSelect.appendChild(opt);
-  }
-  left.appendChild(speciesSelect);
-
   // Form
   const formLabel = document.createElement("label");
   formLabel.style.cssText = "font-size:12px;color:#a1a1aa;display:block;margin-bottom:6px;";
@@ -346,55 +324,35 @@ function showFinalizeModal(vp) {
 
   const formSelect = document.createElement("select");
   formSelect.style.cssText = selectStyle + "margin-bottom:14px;";
-  formSelect.disabled = true;
   const formDefault = document.createElement("option");
   formDefault.value = "";
-  formDefault.textContent = "Select a species first";
+  formDefault.textContent = "Choose form...";
   formDefault.disabled = true;
   formDefault.selected = true;
   formSelect.appendChild(formDefault);
+  for (const f of FORMS) {
+    const opt = document.createElement("option");
+    opt.value = f;
+    opt.textContent = f;
+    formSelect.appendChild(opt);
+  }
   left.appendChild(formSelect);
 
-  let speciesConfig = null; // cached config for current species
+  let formConfig = null; // cached config
 
-  speciesSelect.addEventListener("change", async () => {
-    const sp = SPECIES.find((s) => s.id === speciesSelect.value);
-    formSelect.innerHTML = "";
-    speciesConfig = null;
-    if (!sp) { formSelect.disabled = true; return; }
-    formSelect.disabled = false;
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "Choose form...";
-    placeholder.disabled = true;
-    placeholder.selected = true;
-    formSelect.appendChild(placeholder);
-    for (const f of sp.forms) {
-      const opt = document.createElement("option");
-      opt.value = f;
-      opt.textContent = f;
-      formSelect.appendChild(opt);
-    }
-
-    // Load existing config and apply species-level background as default
+  // Load config once on modal open
+  (async () => {
     try {
-      const configResp = await fetch("/api/config/" + sp.id);
-      speciesConfig = await configResp.json();
-      if (speciesConfig.background) {
-        const hex = String(speciesConfig.background).replace("#", "");
-        colorPicker.value = "#" + hex.padStart(6, "0");
-        colorHex.value = hex.padStart(6, "0");
-        applyColor(hex.padStart(6, "0"));
-      }
+      const configResp = await fetch("/api/config");
+      formConfig = await configResp.json();
     } catch {}
-  });
+  })();
 
-  // When a form is selected, apply its specific background if it has one
+  // When a form is selected, apply its background if it has one
   formSelect.addEventListener("change", () => {
-    if (!speciesConfig) return;
+    if (!formConfig) return;
     const fm = formSelect.value;
-    const formBg = speciesConfig.forms?.[fm]?.background;
-    const bg = formBg || speciesConfig.background;
+    const bg = formConfig[fm]?.background;
     if (bg) {
       const hex = String(bg).replace("#", "");
       colorPicker.value = "#" + hex.padStart(6, "0");
@@ -433,16 +391,14 @@ function showFinalizeModal(vp) {
   left.appendChild(pathPreview);
 
   function updatePathPreview() {
-    const sp = speciesSelect.value;
     const fm = formSelect.value;
-    if (sp && fm) {
-      pathPreview.textContent = "src/three/models/" + sp + "/" + fm + ".glb";
+    if (fm) {
+      pathPreview.textContent = "src/three/models/" + fm + ".glb";
       pathPreview.style.color = "#71717a";
     } else {
       pathPreview.textContent = "";
     }
   }
-  speciesSelect.addEventListener("change", updatePathPreview);
   formSelect.addEventListener("change", updatePathPreview);
 
   // Error
@@ -620,12 +576,11 @@ function showFinalizeModal(vp) {
 
   // ── Save handler ──
   saveBtn.addEventListener("click", async () => {
-    const species = speciesSelect.value;
     const formName = formSelect.value;
     const bgHex = colorHex.value.replace("#", "");
 
-    if (!species || !formName) {
-      errorEl.textContent = "Please select both a species and a form.";
+    if (!formName) {
+      errorEl.textContent = "Please select a form.";
       errorEl.style.display = "block";
       return;
     }
@@ -641,7 +596,6 @@ function showFinalizeModal(vp) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceFile: vp.sourceFile,
-          species,
           formName,
           background: bgHex,
         }),
