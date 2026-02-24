@@ -9,7 +9,7 @@
   },
   "bytesnap": {
     "background": "96a2bb",
-    "targetHeight": 1.0
+    "targetHeight": 1
   },
   "bytewrath": {
     "background": "96a2bb",
@@ -28,5 +28,22 @@
     "background": "a8c4ff",
     "targetHeight": 1.7,
     "yOffset": 0.5
+  },
+  "pinchy": {
+    "background": "73331d",
+    "targetHeight": 1.05
+  },
+  "viceclaw": {
+    "background": "876464",
+    "targetHeight": 0.85,
+    "cameraDistance": 4
+  },
+  "gigaclaw": {
+    "background": "b47227",
+    "targetHeight": 1.5
+  },
+  "molting-egg": {
+    "background": "2a3a5c",
+    "targetHeight": 0.75
   }
 }
