@@ -49,8 +49,6 @@ export function RegistryScreen() {
   }, [allSpecies]);
 
   const selected = entries[selectedIndex] ?? null;
-  const isOwned = selected ? stageMap.has(selected.species.id) : false;
-  const canSee = isOwned || devShowAll;
 
   // Form is locked if species is owned but player hasn't reached this stage yet
   const isLocked = (entry: FlatEntry): boolean => {
@@ -59,7 +57,9 @@ export function RegistryScreen() {
     return STAGE_ORDER.indexOf(entry.form.stage) > STAGE_ORDER.indexOf(reached);
   };
 
+  const selectedOwned = selected ? stageMap.has(selected.species.id) : false;
   const selectedLocked = selected ? isLocked(selected) : false;
+  const selectedRevealed = (selectedOwned && !selectedLocked) || devShowAll;
 
   useKeyboard((key) => {
     if (key.name === "up") {
@@ -106,22 +106,20 @@ export function RegistryScreen() {
         >
           {entries.map((entry, i) => {
             const owned = stageMap.has(entry.species.id);
-            const visible = owned || devShowAll;
-            const locked = owned && isLocked(entry) && !devShowAll;
+            const locked = owned && isLocked(entry);
+            const revealed = (owned && !locked) || devShowAll;
             const isSel = i === selectedIndex;
             const cursor = isSel ? "> " : "  ";
-            const name = visible ? entry.form.name : "???";
+            const name = revealed ? entry.form.name : "???";
             const rarityLabel = RARITY_LABELS[entry.species.rarity];
 
             let nameColor: string;
-            if (!visible) {
+            if (!revealed) {
               nameColor = t.text.hidden;
-            } else if (locked) {
-              nameColor = isSel ? t.text.dim : t.text.hidden;
             } else {
               nameColor = isSel ? t.text.primary : t.text.muted;
             }
-            const rarityColor = visible ? RARITY_COLORS[entry.species.rarity] : t.text.hidden;
+            const rarityColor = revealed ? RARITY_COLORS[entry.species.rarity] : t.text.hidden;
 
             return (
               <box
@@ -135,7 +133,7 @@ export function RegistryScreen() {
                 <text fg={nameColor}>
                   {cursor}{name}
                 </text>
-                <text fg={locked ? t.text.hidden : rarityColor}>{rarityLabel}</text>
+                <text fg={revealed ? rarityColor : t.text.hidden}>{rarityLabel}</text>
               </box>
             );
           })}
@@ -149,7 +147,7 @@ export function RegistryScreen() {
               <RegistryPreview
                 species={selected.species}
                 formIndex={selected.formIndex}
-                locked={(!isOwned || selectedLocked) && !devShowAll}
+                locked={!selectedRevealed}
               />
             ) : (
               <box
@@ -174,11 +172,10 @@ export function RegistryScreen() {
             paddingX={2}
             paddingY={1}
           >
-            {canSee && selected ? (
+            {selectedRevealed && selected ? (
               <FormDetail
                 species={selected.species}
                 form={selected.form}
-                locked={selectedLocked && !devShowAll}
               />
             ) : (
               <box flexDirection="column">
@@ -195,27 +192,17 @@ export function RegistryScreen() {
   );
 }
 
-function FormDetail({
-  species,
-  form,
-  locked,
-}: {
-  species: Species;
-  form: EvolutionForm;
-  locked: boolean;
-}) {
+function FormDetail({ species, form }: { species: Species; form: EvolutionForm }) {
   return (
     <box flexDirection="column">
       <text>
-        <strong fg={locked ? t.text.hidden : t.text.primary}>{form.name}</strong>
+        <strong fg={t.text.primary}>{form.name}</strong>
         {"  "}
-        <span fg={locked ? t.text.hidden : RARITY_COLORS[species.rarity]}>
+        <span fg={RARITY_COLORS[species.rarity]}>
           {RARITY_LABELS[species.rarity]}
         </span>
       </text>
-      <text fg={locked ? t.text.hidden : t.text.muted}>
-        {locked ? "Not yet evolved." : form.description}
-      </text>
+      <text fg={t.text.muted}>{form.description}</text>
     </box>
   );
 }
