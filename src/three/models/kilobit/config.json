@@ -3,6 +3,9 @@
   "forms": {
     "kilobit": {
       "background": "a8c4ff"
+    },
+    "megabyte": {
+      "background": "a8c4ff"
     }
   }
 }
