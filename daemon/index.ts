@@ -1,7 +1,7 @@
 import { TokenWatcher } from "../src/tracking/watcher";
 import { unlinkSync, existsSync } from "fs";
 
-const SOCKET_PATH = "/tmp/token-monsters.sock";
+const SOCKET_PATH = process.env.TOKENMON_SOCKET ?? "/tmp/tokenmon.sock";
 
 // Clean up stale socket
 if (existsSync(SOCKET_PATH)) {
