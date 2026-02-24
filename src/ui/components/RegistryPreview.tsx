@@ -20,28 +20,24 @@ function getGlbModelForForm(species: Species, formIndex: number): string | null 
   const form = species.forms[formIndex];
   if (!form) return null;
   const formName = form.name.toLowerCase().replace(/\s+/g, "-");
-  const path = resolve(modelsRoot, species.id, formName + ".glb");
+  const path = resolve(modelsRoot, formName + ".glb");
   if (existsSync(path)) return path;
   return null;
 }
 
-function loadFormConfig(speciesId: string, formName: string): SpeciesConfig {
+function loadFormConfig(formName: string): SpeciesConfig {
   try {
-    const configPath = resolve(modelsRoot, speciesId, "config.json");
+    const configPath = resolve(modelsRoot, "config.json");
     if (!existsSync(configPath)) return {};
     const raw = JSON.parse(require("fs").readFileSync(configPath, "utf-8"));
-    const formData = raw.forms?.[formName] ?? {};
-    const bg = formData.background ?? raw.background;
+    const formData = raw[formName] ?? {};
+    const bg = formData.background;
     const config: SpeciesConfig = {};
     if (bg != null) config.background = parseInt(String(bg), 16);
-    const th = formData.targetHeight ?? raw.targetHeight;
-    const cd = formData.cameraDistance ?? raw.cameraDistance;
-    const ch = formData.cameraHeight ?? raw.cameraHeight;
-    const lh = formData.lookAtHeight ?? raw.lookAtHeight;
-    if (th != null) config.targetHeight = th;
-    if (cd != null) config.cameraDistance = cd;
-    if (ch != null) config.cameraHeight = ch;
-    if (lh != null) config.lookAtHeight = lh;
+    if (formData.targetHeight != null) config.targetHeight = formData.targetHeight;
+    if (formData.cameraDistance != null) config.cameraDistance = formData.cameraDistance;
+    if (formData.cameraHeight != null) config.cameraHeight = formData.cameraHeight;
+    if (formData.lookAtHeight != null) config.lookAtHeight = formData.lookAtHeight;
     return config;
   } catch {
     return {};
@@ -106,8 +102,8 @@ export function RegistryPreview({ species, formIndex, locked = false }: Registry
   }, [species?.id, formIndex]);
 
   const speciesConfig = useMemo(
-    () => (species && currentFormName ? loadFormConfig(species.id, currentFormName) : {}),
-    [species?.id, currentFormName],
+    () => (currentFormName ? loadFormConfig(currentFormName) : {}),
+    [currentFormName],
   );
 
   const glbScene = useMemo(() => {

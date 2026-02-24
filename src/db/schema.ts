@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS species (
-  id TEXT PRIMARY KEY,
+  id INTEGER PRIMARY KEY,
   description TEXT,
   rarity TEXT NOT NULL CHECK(rarity IN ('common','uncommon','rare','legendary')),
   base_hunger_rate REAL NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS species (
 CREATE TABLE IF NOT EXISTS monsters (
   id TEXT PRIMARY KEY,
   name TEXT,
-  species_id TEXT NOT NULL,
+  species_id INTEGER NOT NULL,
   genome BLOB NOT NULL,
   stage TEXT NOT NULL DEFAULT 'egg' CHECK(stage IN ('egg','hatchling','prime','apex')),
   hunger INTEGER NOT NULL DEFAULT 100 CHECK(hunger BETWEEN 0 AND 100),

@@ -17,7 +17,7 @@ export function getAllSpecies(): Species[] {
   return rows.map(rowToSpecies);
 }
 
-export function getSpeciesById(id: string): Species | null {
+export function getSpeciesById(id: number): Species | null {
   const db = getDatabase();
   const row = db.query("SELECT * FROM species WHERE id = ?").get(id) as any;
   return row ? rowToSpecies(row) : null;
@@ -34,18 +34,18 @@ function rowToSpecies(row: any): Species {
   };
 }
 
-export function getOwnedSpeciesIds(): Set<string> {
+export function getOwnedSpeciesIds(): Set<number> {
   const db = getDatabase();
   const rows = db.query("SELECT DISTINCT species_id FROM monsters").all() as any[];
   return new Set(rows.map((r) => r.species_id));
 }
 
 /** Returns the highest evolution stage reached per species */
-export function getOwnedSpeciesStages(): Map<string, Stage> {
+export function getOwnedSpeciesStages(): Map<number, Stage> {
   const db = getDatabase();
   const rows = db.query("SELECT species_id, stage FROM monsters").all() as any[];
   const order: Stage[] = ["egg", "hatchling", "prime", "apex"];
-  const map = new Map<string, Stage>();
+  const map = new Map<number, Stage>();
   for (const row of rows) {
     const current = map.get(row.species_id);
     if (!current || order.indexOf(row.stage as Stage) > order.indexOf(current)) {

@@ -3,7 +3,7 @@ import type { Species, EvolutionForm } from "./types";
 
 const STARTER_SPECIES: Species[] = [
   {
-    id: "glimmer",
+    id: 1,
     description: "A luminous creature born from the glow of countless terminal prompts. Its body pulses with soft light.",
     rarity: "common",
     baseHungerRate: 3.0,
@@ -16,7 +16,7 @@ const STARTER_SPECIES: Species[] = [
     ],
   },
   {
-    id: "byteclaw",
+    id: 2,
     description: "A scrappy digital predator that feeds on stray tokens. Quick to hatch, slow to evolve.",
     rarity: "common",
     baseHungerRate: 4.0,
@@ -29,7 +29,7 @@ const STARTER_SPECIES: Species[] = [
     ],
   },
   {
-    id: "whisperscale",
+    id: 3,
     description: "A shy, serpentine creature that slips between memory addresses. Grows stronger with cache hits. Rarely seen in the wild.",
     rarity: "uncommon",
     baseHungerRate: 2.0,
@@ -41,7 +41,7 @@ const STARTER_SPECIES: Species[] = [
     ],
   },
   {
-    id: "sparkfin",
+    id: 4,
     description: "An aquatic creature that swims through data streams. Its fins crackle with current.",
     rarity: "uncommon",
     baseHungerRate: 2.5,
@@ -54,7 +54,7 @@ const STARTER_SPECIES: Species[] = [
     ],
   },
   {
-    id: "nullwyrm",
+    id: 5,
     description: "A dragon-like entity that emerges from void pointers and segfaults. Immensely powerful when mature.",
     rarity: "rare",
     baseHungerRate: 5.0,
@@ -67,7 +67,7 @@ const STARTER_SPECIES: Species[] = [
     ],
   },
   {
-    id: "qwerty",
+    id: 6,
     description: "A mischievous creature that materialises from rapid keystrokes. Patient and quiet at first, it grows into something unsettlingly aware.",
     rarity: "rare",
     baseHungerRate: 2.5,
@@ -79,19 +79,19 @@ const STARTER_SPECIES: Species[] = [
     ],
   },
   {
-    id: "kilobit",
+    id: 7,
     description: "A compact data creature that doubles in density as it grows. Small but deceptively heavy.",
     rarity: "rare",
     baseHungerRate: 3.0,
     baseHappinessRate: 2.0,
     forms: [
       { stage: "egg", name: "Dense Egg", description: "A heavy little egg packed tight with raw data.", evolvesAtLevel: 5 },
-      { stage: "hatchling", name: "Kilobit", description: "A compact critter packed with raw data.", evolvesAtLevel: 18 },
-      { stage: "prime", name: "Megabyte", description: "A lumbering but lovable tank. Stores everything, forgets nothing.", evolvesAtLevel: null },
+      { stage: "hatchling", name: "Megabyte", description: "A compact critter packed with raw data.", evolvesAtLevel: 18 },
+      { stage: "prime", name: "Gigabyte", description: "A lumbering but lovable tank. Stores everything, forgets nothing.", evolvesAtLevel: null },
     ],
   },
   {
-    id: "pinchy",
+    id: 8,
     description: "An open-source crustacean that grows by molting its shell. Each molt reveals harder armour underneath. Thrives in any environment you put it in.",
     rarity: "common",
     baseHungerRate: 3.5,

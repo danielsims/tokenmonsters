@@ -1,0 +1,32 @@
+{
+  "jagged-egg": {
+    "background": "96a2bb",
+    "targetHeight": 0.7
+  },
+  "bytepup": {
+    "background": "96a2bb",
+    "targetHeight": 1.1
+  },
+  "bytesnap": {
+    "background": "96a2bb",
+    "targetHeight": 1.0
+  },
+  "bytewrath": {
+    "background": "96a2bb",
+    "targetHeight": 1.7,
+    "yOffset": 0.15
+  },
+  "dense-egg": {
+    "background": "a8c4ff",
+    "targetHeight": 0.7
+  },
+  "megabyte": {
+    "background": "a8c4ff",
+    "targetHeight": 1.1
+  },
+  "gigabyte": {
+    "background": "a8c4ff",
+    "targetHeight": 1.7,
+    "yOffset": 0.5
+  }
+}

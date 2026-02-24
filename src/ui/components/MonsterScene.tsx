@@ -1,12 +1,6 @@
 import { useRef, useMemo, useCallback, useState, useEffect } from "react";
 import { useKeyboard } from "@opentui/react";
 import { useGame } from "../../game/context";
-import { decodeGenome } from "../../models/genome";
-import { getEvolutionProgress } from "../../models/evolution";
-import { createEggScene } from "../../three/scenes/egg";
-import { createHatchlingScene } from "../../three/scenes/hatchling";
-import { createJuvenileScene } from "../../three/scenes/juvenile";
-import { createAdultScene } from "../../three/scenes/adult";
 import { loadGlbTestScene, updateSceneBackground } from "../../three/glb-loader";
 import { resolve } from "path";
 import { existsSync } from "fs";
@@ -15,10 +9,9 @@ import { t, getSceneBg } from "../theme";
 
 /**
  * Model directory layout:
- *   src/three/models/<speciesId>/<formName>.glb
+ *   src/three/models/<formName>.glb
  *
- * Form names come from species.ts (lowercased).
- * e.g. byteclaw/bytepup.glb, byteclaw/byteclaw-egg.glb
+ * Form names come from species.ts (lowercased, spaces to dashes).
  */
 const modelsRoot = resolve(import.meta.dir, "../../three/models");
 
@@ -36,30 +29,25 @@ function getGlbModel(species: Species | null, stage: Stage): string | null {
   const form = species.forms.find((f) => f.stage === stage);
   if (!form) return null;
   const formName = form.name.toLowerCase().replace(/\s+/g, "-");
-  const path = resolve(modelsRoot, species.id, formName + ".glb");
+  const path = resolve(modelsRoot, formName + ".glb");
   if (existsSync(path)) return path;
   return null;
 }
 
-function loadFormConfig(speciesId: string, formName: string): SpeciesConfig {
+function loadFormConfig(formName: string): SpeciesConfig {
   try {
-    const configPath = resolve(modelsRoot, speciesId, "config.json");
+    const configPath = resolve(modelsRoot, "config.json");
     if (!existsSync(configPath)) return {};
     const raw = JSON.parse(require("fs").readFileSync(configPath, "utf-8"));
-    const formData = raw.forms?.[formName] ?? {};
-    const bg = formData.background ?? raw.background;
+    const formData = raw[formName] ?? {};
+    const bg = formData.background;
     const config: SpeciesConfig = {};
     if (bg != null) config.background = parseInt(String(bg), 16);
-    const th = formData.targetHeight ?? raw.targetHeight;
-    const cd = formData.cameraDistance ?? raw.cameraDistance;
-    const ch = formData.cameraHeight ?? raw.cameraHeight;
-    const lh = formData.lookAtHeight ?? raw.lookAtHeight;
-    const yo = formData.yOffset ?? raw.yOffset;
-    if (th != null) config.targetHeight = th;
-    if (cd != null) config.cameraDistance = cd;
-    if (ch != null) config.cameraHeight = ch;
-    if (lh != null) config.lookAtHeight = lh;
-    if (yo != null) config.yOffset = yo;
+    if (formData.targetHeight != null) config.targetHeight = formData.targetHeight;
+    if (formData.cameraDistance != null) config.cameraDistance = formData.cameraDistance;
+    if (formData.cameraHeight != null) config.cameraHeight = formData.cameraHeight;
+    if (formData.lookAtHeight != null) config.lookAtHeight = formData.lookAtHeight;
+    if (formData.yOffset != null) config.yOffset = formData.yOffset;
     return config;
   } catch {
     return {};
@@ -74,13 +62,6 @@ export function MonsterScene() {
   // User rotation: pauseAccum tracks total paused time so orbit resumes in place
   const dragRef = useRef({ rotation: 0, lastInteraction: 0, pauseAccum: 0, zoom: 0 });
 
-  const traits = useMemo(
-    () => (monster ? decodeGenome(monster.genome) : null),
-    [monster?.genome],
-  );
-
-  const progress = monster && species ? getEvolutionProgress(monster, species) : 0;
-
   const glbPath = monster && species ? getGlbModel(species, monster.stage) : null;
 
   const currentFormName = useMemo(() => {
@@ -90,8 +71,8 @@ export function MonsterScene() {
   }, [monster?.stage, species]);
 
   const speciesConfig = useMemo(
-    () => species && currentFormName ? loadFormConfig(species.id, currentFormName) : {},
-    [species?.id, currentFormName],
+    () => currentFormName ? loadFormConfig(currentFormName) : {},
+    [currentFormName],
   );
 
   const glbScene = useMemo(() => {
@@ -119,28 +100,14 @@ export function MonsterScene() {
 
   const sceneData = useMemo(() => {
     if (glbScene && glbReady) return glbScene;
-    if (!traits || !monster) return null;
-    switch (monster.stage) {
-      case "egg":
-        return createEggScene(traits);
-      case "hatchling":
-        return createHatchlingScene(traits);
-      case "prime":
-        return createJuvenileScene(traits);
-      case "apex":
-        return createAdultScene(traits);
-    }
-  }, [monster?.stage, traits, glbScene, glbReady]);
+    return null;
+  }, [glbScene, glbReady]);
 
   // Update scene background on theme change without rebuilding the scene
   const sceneBg = getSceneBg();
   useEffect(() => {
     if (sceneData) updateSceneBackground(sceneData.scene, sceneBg);
   }, [sceneData, sceneBg]);
-
-  const wobbleIntensity = monster?.stage === "egg" ? Math.max(0, (progress - 50) / 50) : 0;
-
-  const isGlb = !!(glbScene && glbReady);
 
   // Capture the initial camera distance (only read once per scene, stored in ref)
   const baseCameraDistRef = useRef(3.2);
@@ -152,7 +119,7 @@ export function MonsterScene() {
 
   // Arrow key rotation — pauses auto-spin for 1.5s, resumes from current position
   useKeyboard((key) => {
-    if (!isGlb) return;
+    if (!sceneData) return;
     if (key.name === "left" || key.name === "right") {
       const d = dragRef.current;
       d.rotation += key.name === "left" ? -0.15 : 0.15;
@@ -179,23 +146,13 @@ export function MonsterScene() {
       const aspectScale = aspect > MAX_ASPECT ? aspect / MAX_ASPECT : 1;
 
       const baseDist = baseCameraDistRef.current;
-
-      if (monster?.stage === "egg") {
-        sceneData.camera.position.z = baseDist * aspectScale;
-        (sceneData as any).update(timeRef.current, wobbleIntensity);
-      } else if (isGlb) {
-        const d = dragRef.current;
-        const paused = Date.now() - d.lastInteraction < PAUSE_MS;
-        // While paused, accumulate skipped time so orbit resumes in place
-        if (paused) d.pauseAccum += dt;
-        sceneData.camera.position.z = baseDist * aspectScale + d.zoom;
-        (sceneData as any).update(timeRef.current - d.pauseAccum, d.rotation);
-      } else {
-        sceneData.camera.position.z = baseDist * aspectScale;
-        (sceneData as any).update(timeRef.current);
-      }
+      const d = dragRef.current;
+      const paused = Date.now() - d.lastInteraction < PAUSE_MS;
+      if (paused) d.pauseAccum += dt;
+      sceneData.camera.position.z = baseDist * aspectScale + d.zoom;
+      (sceneData as any).update(timeRef.current - d.pauseAccum, d.rotation);
     },
-    [sceneData, monster?.stage, wobbleIntensity, isGlb],
+    [sceneData],
   );
 
   if (!monster || !species || !sceneData) {

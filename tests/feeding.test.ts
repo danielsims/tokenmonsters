@@ -6,7 +6,7 @@ function makeMockMonster(overrides: Partial<Monster> = {}): Monster {
   return {
     id: "test-id",
     name: "Test",
-    speciesId: "glimmer",
+    speciesId: 1,
     genome: Buffer.alloc(32),
     stage: "hatchling",
     hunger: 50,

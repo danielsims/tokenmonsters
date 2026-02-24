@@ -127,7 +127,7 @@ export function InfoScreen() {
           <text fg={t.text.secondary}>
             <u>Details</u>
           </text>
-          <text fg={t.text.muted}>Species:   {species.id} ({species.rarity})</text>
+          <text fg={t.text.muted}>No. {String(species.id).padStart(3, "0")}   ({species.rarity})</text>
           <text fg={t.text.muted}>Origin:    {monster.origin}</text>
           <text fg={t.text.muted}>
             Created: {new Date(monster.createdAt).toLocaleDateString()}

@@ -11,7 +11,7 @@ import { getLevel, getXpForLevel, getLevelProgress } from "../src/models/level";
 import type { Monster, Species } from "../src/models/types";
 
 const TEST_SPECIES: Species = {
-  id: "glimmer",
+  id: 1,
   description: "A luminous creature.",
   rarity: "common",
   baseHungerRate: 3.0,
@@ -26,7 +26,7 @@ const TEST_SPECIES: Species = {
 
 // 2-form species (like whisperscale)
 const TWO_FORM_SPECIES: Species = {
-  id: "whisperscale",
+  id: 3,
   description: "A shy creature.",
   rarity: "uncommon",
   baseHungerRate: 2.0,
@@ -42,7 +42,7 @@ function makeMockMonster(overrides: Partial<Monster> = {}): Monster {
   return {
     id: "test-id",
     name: null,
-    speciesId: "glimmer",
+    speciesId: 1,
     genome: Buffer.alloc(32),
     stage: "egg",
     hunger: 100,
@@ -189,7 +189,7 @@ describe("Evolution Progress", () => {
   });
 
   test("2-form species final form has 100% progress", () => {
-    const monster = makeMockMonster({ stage: "prime", speciesId: "whisperscale", experience: 999999999 });
+    const monster = makeMockMonster({ stage: "prime", speciesId: 3, experience: 999999999 });
     expect(getEvolutionProgress(monster, TWO_FORM_SPECIES)).toBe(100);
   });
 });

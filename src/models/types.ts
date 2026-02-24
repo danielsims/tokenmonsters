@@ -11,7 +11,7 @@ export interface EvolutionForm {
 }
 
 export interface Species {
-  id: string;
+  id: number;
   description: string;
   rarity: Rarity;
   baseHungerRate: number;
@@ -22,7 +22,7 @@ export interface Species {
 export interface Monster {
   id: string;
   name: string | null;
-  speciesId: string;
+  speciesId: number;
   genome: Buffer;
   stage: Stage;
   hunger: number;
