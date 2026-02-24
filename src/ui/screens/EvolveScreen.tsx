@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useGame } from "../../game/context";
 import { getCurrentForm } from "../../models/evolution";
+import { playSound } from "../../audio/player";
 import { t } from "../theme";
 
 export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
@@ -16,6 +17,7 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
     const completeTimer = setTimeout(() => {
       clearInterval(dotInterval);
       setComplete(true);
+      playSound("evolve-complete");
       setTimeout(onComplete, 2500);
     }, 3000);
 

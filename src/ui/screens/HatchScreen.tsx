@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useGame } from "../../game/context";
 import { getCurrentForm } from "../../models/evolution";
+import { playSound } from "../../audio/player";
 import { t } from "../theme";
 
 const HATCH_FRAMES = [
@@ -53,6 +54,7 @@ export function HatchScreen({ onComplete }: { onComplete: () => void }) {
       if (current >= HATCH_FRAMES.length) {
         clearInterval(interval);
         setShowMessage(true);
+        playSound("evolve-complete");
         setTimeout(onComplete, 3000);
         return;
       }
