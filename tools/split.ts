@@ -253,17 +253,21 @@ for (let i = margin; i < numBins - margin; i++) {
 // areas within a single mesh (e.g. between limbs) still have significant density.
 // We require: density < 1% of peak AND the gap spans at least 3% of the range.
 if (!clustersExplicit) {
-  const gapThreshold = peakDensity * 0.01;
-  const minGapWidth = Math.floor(numBins * 0.03);
+  // Two-pass valley detection:
+  // Pass 1: near-zero absolute gaps (original method)
+  // Pass 2: relative valleys — where density drops below 15% of local average
+  const absThreshold = peakDensity * 0.01;
+  const minGapWidth = Math.floor(numBins * 0.02);
   const gaps: Array<{ center: number; density: number; width: number }> = [];
 
+  // Pass 1: absolute near-zero gaps
   let inGap = false;
   let gapStart = 0;
   let gapMinDensity = Infinity;
   let gapMinBin = 0;
 
   for (let i = margin; i < numBins - margin; i++) {
-    if (smoothed[i] <= gapThreshold) {
+    if (smoothed[i] <= absThreshold) {
       if (!inGap) {
         inGap = true;
         gapStart = i;
@@ -286,6 +290,46 @@ if (!clustersExplicit) {
     const width = (numBins - margin) - gapStart;
     if (width >= minGapWidth) {
       gaps.push({ center: gapMinBin, density: gapMinDensity, width });
+    }
+  }
+
+  // Pass 2: relative valleys — find bins where density drops to <15% of the
+  // average of the 20 bins on each side. This catches gaps that still have some
+  // debris vertices from AI-generated models.
+  const localWindow = 20;
+  const relativeDropRatio = 0.15;
+  for (let i = margin; i < numBins - margin; i++) {
+    // Already found as absolute gap?
+    if (gaps.some((g) => Math.abs(g.center - i) < minSeparation)) continue;
+
+    // Compute local average from surrounding bins (excluding the center region)
+    let leftSum = 0, leftCount = 0;
+    for (let j = Math.max(margin, i - localWindow); j < Math.max(margin, i - 2); j++) {
+      leftSum += smoothed[j];
+      leftCount++;
+    }
+    let rightSum = 0, rightCount = 0;
+    for (let j = Math.min(numBins - margin, i + 3); j < Math.min(numBins - margin, i + localWindow + 1); j++) {
+      rightSum += smoothed[j];
+      rightCount++;
+    }
+
+    if (leftCount === 0 || rightCount === 0) continue;
+    const leftAvg = leftSum / leftCount;
+    const rightAvg = rightSum / rightCount;
+    const localAvg = (leftAvg + rightAvg) / 2;
+
+    // Both sides must have substantial density for this to be a real gap
+    if (leftAvg < peakDensity * 0.1 || rightAvg < peakDensity * 0.1) continue;
+
+    if (smoothed[i] < localAvg * relativeDropRatio) {
+      gaps.push({ center: i, density: smoothed[i], width: 1 });
+      console.log(
+        "  relative valley at bin " + i +
+        " density=" + smoothed[i].toFixed(0) +
+        " localAvg=" + localAvg.toFixed(0) +
+        " ratio=" + (smoothed[i] / localAvg).toFixed(3)
+      );
     }
   }
 
@@ -315,12 +359,88 @@ const assignments = new Int32Array(islands.length);
 const islandToCluster = new Map<number, number>();
 
 if (numClusters <= 1) {
-  // Single model — no cuts needed, assign everything to cluster 0
-  numClusters = 1;
-  console.log("Single cluster — skipping density valley cuts");
+  // Density detection found no gaps — try proximity-based splitting.
+  // If the models overlap in space but don't share vertices, connected
+  // islands that are near each other form distinct super-clusters.
+  console.log("Density found 1 cluster — trying proximity-based split...");
+  const PROXIMITY = 0.008;
+
+  // Compute island bounding boxes
+  const islandBounds = islands.map((isl) => {
+    let minIX = Infinity, maxIX = -Infinity;
+    let minIY = Infinity, maxIY = -Infinity;
+    let minIZ = Infinity, maxIZ = -Infinity;
+    for (let v = 0; v < vertCount; v++) {
+      if (find(v) !== isl.root) continue;
+      const x = positions[v * 3], y = positions[v * 3 + 1], z = positions[v * 3 + 2];
+      if (x < minIX) minIX = x; if (x > maxIX) maxIX = x;
+      if (y < minIY) minIY = y; if (y > maxIY) maxIY = y;
+      if (z < minIZ) minIZ = z; if (z > maxIZ) maxIZ = z;
+    }
+    return { minX: minIX, maxX: maxIX, minY: minIY, maxY: maxIY, minZ: minIZ, maxZ: maxIZ };
+  });
+
+  // Union-find on islands: connect if bounding boxes overlap within tolerance
+  const iParent = new Int32Array(islands.length);
+  const iRank = new Int32Array(islands.length);
+  for (let i = 0; i < islands.length; i++) iParent[i] = i;
+
+  function findI(x: number): number {
+    while (iParent[x] !== x) { iParent[x] = iParent[iParent[x]]; x = iParent[x]; }
+    return x;
+  }
+  function uniteI(a: number, b: number) {
+    a = findI(a); b = findI(b);
+    if (a === b) return;
+    if (iRank[a] < iRank[b]) { const t = a; a = b; b = t; }
+    iParent[b] = a;
+    if (iRank[a] === iRank[b]) iRank[a]++;
+  }
+
   for (let i = 0; i < islands.length; i++) {
-    assignments[i] = 0;
-    islandToCluster.set(islands[i].root, 0);
+    const a = islandBounds[i];
+    for (let j = i + 1; j < islands.length; j++) {
+      const b = islandBounds[j];
+      if (a.maxX + PROXIMITY >= b.minX && b.maxX + PROXIMITY >= a.minX &&
+          a.maxY + PROXIMITY >= b.minY && b.maxY + PROXIMITY >= a.minY &&
+          a.maxZ + PROXIMITY >= b.minZ && b.maxZ + PROXIMITY >= a.minZ) {
+        uniteI(i, j);
+      }
+    }
+  }
+
+  // Count super-clusters
+  const superMap = new Map<number, number[]>();
+  for (let i = 0; i < islands.length; i++) {
+    const root = findI(i);
+    if (!superMap.has(root)) superMap.set(root, []);
+    superMap.get(root)!.push(i);
+  }
+
+  const superClusters = [...superMap.values()].sort((a, b) => {
+    const aV = a.reduce((s, i) => s + islands[i].count, 0);
+    const bV = b.reduce((s, i) => s + islands[i].count, 0);
+    return bV - aV;
+  });
+
+  if (superClusters.length >= 2) {
+    numClusters = superClusters.length;
+    console.log("Proximity split found " + numClusters + " clusters");
+    for (let k = 0; k < numClusters; k++) {
+      const totalVerts = superClusters[k].reduce((s, i) => s + islands[i].count, 0);
+      console.log("  Cluster " + k + ": " + superClusters[k].length + " islands, " + totalVerts + " verts (" + (totalVerts / vertCount * 100).toFixed(1) + "%)");
+      for (const idx of superClusters[k]) {
+        assignments[idx] = k;
+        islandToCluster.set(islands[idx].root, k);
+      }
+    }
+  } else {
+    numClusters = 1;
+    console.log("Proximity split also found 1 cluster — single model");
+    for (let i = 0; i < islands.length; i++) {
+      assignments[i] = 0;
+      islandToCluster.set(islands[i].root, 0);
+    }
   }
 } else {
   const candidates: Array<{ bin: number; density: number }> = [];
