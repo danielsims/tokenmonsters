@@ -4,15 +4,15 @@ import type { Species } from "./types";
 const STARTER_SPECIES: Species[] = [
   {
     id: 1,
-    description: "A luminous creature born from the glow of countless terminal prompts. Its body pulses with soft light.",
+    description: "An open-source crustacean that grows by molting its shell. Each molt reveals harder armour underneath. Thrives in any environment you put it in.",
     rarity: "common",
-    baseHungerRate: 3.0,
+    baseHungerRate: 3.5,
     baseHappinessRate: 2.0,
     forms: [
-      { stage: "egg", name: "Dim Egg", description: "A barely-glowing egg. Hold it to a dark screen and it pulses.", evolvesAtLevel: null, hatchXp: 5_000_000 },
-      { stage: "hatchling", name: "Flicker", description: "An unstable little light that blinks in and out of visibility.", evolvesAtLevel: 16 },
-      { stage: "prime", name: "Luminos", description: "A steady beam of living light. Illuminates corrupted sectors wherever it drifts.", evolvesAtLevel: 36 },
-      { stage: "apex", name: "Phosphor", description: "A blazing relic of CRT glory. Its glow burns permanent afterimages.", evolvesAtLevel: null },
+      { stage: "egg", name: "Molting Egg", description: "An egg already shedding its outer layer.", evolvesAtLevel: null, hatchXp: 5_000_000 },
+      { stage: "hatchling", name: "Pinchy", description: "A small digital crab that snips rogue packets. Had three names before it hatched.", evolvesAtLevel: 16 },
+      { stage: "prime", name: "Viceclaw", description: "Fiercely loyal to its human. Its claws crack encryption.", evolvesAtLevel: 36 },
+      { stage: "apex", name: "Gigaclaw", description: "A colossal siege crab. One open claw collapses entire data structures.", evolvesAtLevel: null },
     ],
   },
   {
@@ -92,15 +92,15 @@ const STARTER_SPECIES: Species[] = [
   },
   {
     id: 8,
-    description: "An open-source crustacean that grows by molting its shell. Each molt reveals harder armour underneath. Thrives in any environment you put it in.",
+    description: "A luminous creature born from the glow of countless terminal prompts. Its body pulses with soft light.",
     rarity: "common",
-    baseHungerRate: 3.5,
+    baseHungerRate: 3.0,
     baseHappinessRate: 2.0,
     forms: [
-      { stage: "egg", name: "Molting Egg", description: "An egg already shedding its outer layer.", evolvesAtLevel: null, hatchXp: 5_000_000 },
-      { stage: "hatchling", name: "Pinchy", description: "A small digital crab that snips rogue packets. Had three names before it hatched.", evolvesAtLevel: 16 },
-      { stage: "prime", name: "Viceclaw", description: "Fiercely loyal to its human. Its claws crack encryption.", evolvesAtLevel: 36 },
-      { stage: "apex", name: "Gigaclaw", description: "A colossal siege crab. One open claw collapses entire data structures.", evolvesAtLevel: null },
+      { stage: "egg", name: "Dim Egg", description: "A barely-glowing egg. Hold it to a dark screen and it pulses.", evolvesAtLevel: null, hatchXp: 5_000_000 },
+      { stage: "hatchling", name: "Flicker", description: "An unstable little light that blinks in and out of visibility.", evolvesAtLevel: 16 },
+      { stage: "prime", name: "Luminos", description: "A steady beam of living light. Illuminates corrupted sectors wherever it drifts.", evolvesAtLevel: 36 },
+      { stage: "apex", name: "Phosphor", description: "A blazing relic of CRT glory. Its glow burns permanent afterimages.", evolvesAtLevel: null },
     ],
   },
 ];
