@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import type { Species, EvolutionForm } from "./types";
+import type { Species } from "./types";
 
 const STARTER_SPECIES: Species[] = [
   {
@@ -9,7 +9,7 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 3.0,
     baseHappinessRate: 2.0,
     forms: [
-      { stage: "egg", name: "Dim Egg", description: "A barely-glowing egg. Hold it to a dark screen and it pulses.", evolvesAtLevel: 6 },
+      { stage: "egg", name: "Dim Egg", description: "A barely-glowing egg. Hold it to a dark screen and it pulses.", evolvesAtLevel: null, hatchXp: 5_000_000 },
       { stage: "hatchling", name: "Flicker", description: "An unstable little light that blinks in and out of visibility.", evolvesAtLevel: 16 },
       { stage: "prime", name: "Luminos", description: "A steady beam of living light. Illuminates corrupted sectors wherever it drifts.", evolvesAtLevel: 36 },
       { stage: "apex", name: "Phosphor", description: "A blazing relic of CRT glory. Its glow burns permanent afterimages.", evolvesAtLevel: null },
@@ -22,7 +22,7 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 4.0,
     baseHappinessRate: 1.5,
     forms: [
-      { stage: "egg", name: "Jagged Egg", description: "A sharp-shelled egg crackling with static. Bites back if you hold it wrong.", evolvesAtLevel: 1 },
+      { stage: "egg", name: "Jagged Egg", description: "A sharp-shelled egg crackling with static. Bites back if you hold it wrong.", evolvesAtLevel: null, hatchXp: 2_500_000 },
       { stage: "hatchling", name: "Bytepup", description: "A scrappy little data-hunter. All teeth, no patience.", evolvesAtLevel: 6 },
       { stage: "prime", name: "Bytesnap", description: "Its jaws shred corrupted packets. Loyal once fed, vicious when hungry.", evolvesAtLevel: 16 },
       { stage: "apex", name: "Bytewrath", description: "A digital apex predator. Entire file systems go quiet when it hunts.", evolvesAtLevel: null },
@@ -35,7 +35,7 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 2.0,
     baseHappinessRate: 3.5,
     forms: [
-      { stage: "egg", name: "Hollow Egg", description: "Feels empty. Press your ear to it and you'll hear cached whispers.", evolvesAtLevel: 6 },
+      { stage: "egg", name: "Hollow Egg", description: "Feels empty. Press your ear to it and you'll hear cached whispers.", evolvesAtLevel: null, hatchXp: 5_000_000 },
       { stage: "hatchling", name: "Slink", description: "A translucent serpent that slips between memory addresses. Blink and it's gone.", evolvesAtLevel: 16 },
       { stage: "prime", name: "Cachefang", description: "Its bite injects cached memories. Silent, precise, and impossible to find twice.", evolvesAtLevel: null },
     ],
@@ -47,7 +47,7 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 2.5,
     baseHappinessRate: 2.5,
     forms: [
-      { stage: "egg", name: "Fizzing Egg", description: "An egg that crackles and pops like static discharge. Don't drop it in water.", evolvesAtLevel: 6 },
+      { stage: "egg", name: "Fizzing Egg", description: "An egg that crackles and pops like static discharge. Don't drop it in water.", evolvesAtLevel: null, hatchXp: 5_000_000 },
       { stage: "hatchling", name: "Fry", description: "A tiny fish trailing sparks through shallow data streams.", evolvesAtLevel: 16 },
       { stage: "prime", name: "Volteel", description: "An electric eel surging through data currents. Touch it and your hair stands up.", evolvesAtLevel: 36 },
       { stage: "apex", name: "Ampstorm", description: "A tempest of pure amperage. Entire networks go dark in its wake.", evolvesAtLevel: null },
@@ -60,7 +60,7 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 5.0,
     baseHappinessRate: 4.0,
     forms: [
-      { stage: "egg", name: "Absent Egg", description: "An egg that shouldn't exist. It absorbs light and returns nothing.", evolvesAtLevel: 6 },
+      { stage: "egg", name: "Absent Egg", description: "An egg that shouldn't exist. It absorbs light and returns nothing.", evolvesAtLevel: null, hatchXp: 7_500_000 },
       { stage: "hatchling", name: "Segfault", description: "A small, glitchy dragon. Things crash in its presence.", evolvesAtLevel: 20 },
       { stage: "prime", name: "Voidmaw", description: "Void energy pours from its jaws. Memory corrupts at its touch.", evolvesAtLevel: 42 },
       { stage: "apex", name: "Nullvoid", description: "A void mage that rewrites reality. Its spells are segfaults, its staff a dangling pointer.", evolvesAtLevel: null },
@@ -73,7 +73,7 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 2.5,
     baseHappinessRate: 3.0,
     forms: [
-      { stage: "egg", name: "Qwerty Egg", description: "An egg that rattles like a mechanical switch.", evolvesAtLevel: 5 },
+      { stage: "egg", name: "Qwerty Egg", description: "An egg that rattles like a mechanical switch.", evolvesAtLevel: null, hatchXp: 5_000_000 },
       { stage: "hatchling", name: "Qwerty", description: "A tiny creature that skitters across keyboards, chattering in clicks.", evolvesAtLevel: 15 },
       { stage: "prime", name: "Daemon", description: "It runs silently in the background now. Always watching, never stopping.", evolvesAtLevel: null },
     ],
@@ -85,7 +85,7 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 3.0,
     baseHappinessRate: 2.0,
     forms: [
-      { stage: "egg", name: "Dense Egg", description: "A heavy little egg packed tight with raw data.", evolvesAtLevel: 5 },
+      { stage: "egg", name: "Dense Egg", description: "A heavy little egg packed tight with raw data.", evolvesAtLevel: null, hatchXp: 5_000_000 },
       { stage: "hatchling", name: "Megabyte", description: "A compact critter packed with raw data.", evolvesAtLevel: 18 },
       { stage: "prime", name: "Gigabyte", description: "A lumbering but lovable tank. Stores everything, forgets nothing.", evolvesAtLevel: null },
     ],
@@ -97,7 +97,7 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 3.5,
     baseHappinessRate: 2.0,
     forms: [
-      { stage: "egg", name: "Molting Egg", description: "An egg already shedding its outer layer.", evolvesAtLevel: 6 },
+      { stage: "egg", name: "Molting Egg", description: "An egg already shedding its outer layer.", evolvesAtLevel: null, hatchXp: 5_000_000 },
       { stage: "hatchling", name: "Pinchy", description: "A small digital crab that snips rogue packets. Had three names before it hatched.", evolvesAtLevel: 16 },
       { stage: "prime", name: "Viceclaw", description: "Fiercely loyal to its human. Its claws crack encryption.", evolvesAtLevel: 36 },
       { stage: "apex", name: "Gigaclaw", description: "A colossal siege crab. One open claw collapses entire data structures.", evolvesAtLevel: null },

@@ -17,7 +17,7 @@ const TEST_SPECIES: Species = {
   baseHungerRate: 3.0,
   baseHappinessRate: 2.0,
   forms: [
-    { stage: "egg", name: "Glimmer Egg", description: "A glowing egg.", evolvesAtLevel: 6 },
+    { stage: "egg", name: "Glimmer Egg", description: "A glowing egg.", evolvesAtLevel: null, hatchXp: 5_000_000 },
     { stage: "hatchling", name: "Glimlet", description: "A tiny spark.", evolvesAtLevel: 16 },
     { stage: "prime", name: "Glimmora", description: "Radiant tendrils.", evolvesAtLevel: 36 },
     { stage: "apex", name: "Glimmarion", description: "A blazing beacon.", evolvesAtLevel: null },
@@ -32,7 +32,7 @@ const TWO_FORM_SPECIES: Species = {
   baseHungerRate: 2.0,
   baseHappinessRate: 3.5,
   forms: [
-    { stage: "egg", name: "Whisperscale Egg", description: "An egg.", evolvesAtLevel: 6 },
+    { stage: "egg", name: "Whisperscale Egg", description: "An egg.", evolvesAtLevel: null, hatchXp: 5_000_000 },
     { stage: "hatchling", name: "Whispling", description: "A serpentine hatchling.", evolvesAtLevel: 16 },
     { stage: "prime", name: "Whispera", description: "Scales shimmer.", evolvesAtLevel: null },
   ],
@@ -62,8 +62,8 @@ function makeMockMonster(overrides: Partial<Monster> = {}): Monster {
 }
 
 describe("Level System", () => {
-  test("level 1 requires 0 XP", () => {
-    expect(getXpForLevel(1)).toBe(0);
+  test("level 1 requires 1.5M XP", () => {
+    expect(getXpForLevel(1)).toBe(1_500_000);
   });
 
   test("XP curve is monotonically increasing", () => {
@@ -75,8 +75,8 @@ describe("Level System", () => {
     }
   });
 
-  test("getLevel returns 1 for 0 XP", () => {
-    expect(getLevel(0)).toBe(1);
+  test("getLevel returns 0 for 0 XP", () => {
+    expect(getLevel(0)).toBe(0);
   });
 
   test("getLevel returns correct level at exact thresholds", () => {
@@ -126,16 +126,20 @@ describe("Evolution Forms", () => {
 });
 
 describe("Evolution Logic", () => {
-  test("shouldEvolve returns true when level meets threshold", () => {
-    const xp = getXpForLevel(6);
-    const monster = makeMockMonster({ stage: "egg", experience: xp });
-    expect(shouldEvolve(monster, TEST_SPECIES, 6)).toBe(true);
+  test("shouldEvolve returns true for egg when XP meets hatchXp", () => {
+    const monster = makeMockMonster({ stage: "egg", experience: 5_000_000 });
+    expect(shouldEvolve(monster, TEST_SPECIES, 0)).toBe(true);
   });
 
-  test("shouldEvolve returns false when level is below threshold", () => {
-    const xp = getXpForLevel(5);
-    const monster = makeMockMonster({ stage: "egg", experience: xp });
-    expect(shouldEvolve(monster, TEST_SPECIES, 5)).toBe(false);
+  test("shouldEvolve returns false for egg when XP is below hatchXp", () => {
+    const monster = makeMockMonster({ stage: "egg", experience: 4_999_999 });
+    expect(shouldEvolve(monster, TEST_SPECIES, 0)).toBe(false);
+  });
+
+  test("shouldEvolve returns true for hatchling when level meets threshold", () => {
+    const xp = getXpForLevel(16);
+    const monster = makeMockMonster({ stage: "hatchling", experience: xp });
+    expect(shouldEvolve(monster, TEST_SPECIES, 16)).toBe(true);
   });
 
   test("shouldEvolve returns false for final form", () => {
@@ -143,16 +147,16 @@ describe("Evolution Logic", () => {
     expect(shouldEvolve(monster, TEST_SPECIES, 99)).toBe(false);
   });
 
-  test("getTargetStage can skip stages with high level", () => {
-    expect(getTargetStage("egg", 36, TEST_SPECIES)).toBe("apex");
+  test("getTargetStage hatches egg when XP meets hatchXp", () => {
+    expect(getTargetStage("egg", 0, TEST_SPECIES, 5_000_000)).toBe("hatchling");
   });
 
-  test("getTargetStage returns current if no threshold met", () => {
-    expect(getTargetStage("egg", 3, TEST_SPECIES)).toBe("egg");
+  test("getTargetStage keeps egg when XP below hatchXp", () => {
+    expect(getTargetStage("egg", 0, TEST_SPECIES, 1_000_000)).toBe("egg");
   });
 
-  test("getTargetStage evolves egg to hatchling at level 6", () => {
-    expect(getTargetStage("egg", 6, TEST_SPECIES)).toBe("hatchling");
+  test("getTargetStage can skip stages with high level and XP", () => {
+    expect(getTargetStage("egg", 36, TEST_SPECIES, 5_000_000)).toBe("apex");
   });
 
   test("getTargetStage evolves hatchling to prime at level 16", () => {
@@ -178,9 +182,14 @@ describe("Display Names", () => {
 });
 
 describe("Evolution Progress", () => {
-  test("egg at level 1 has 0% progress", () => {
+  test("egg at 0 XP has 0% progress", () => {
     const monster = makeMockMonster({ stage: "egg", experience: 0 });
     expect(getEvolutionProgress(monster, TEST_SPECIES)).toBe(0);
+  });
+
+  test("egg at half hatchXp has 50% progress", () => {
+    const monster = makeMockMonster({ stage: "egg", experience: 2_500_000 });
+    expect(getEvolutionProgress(monster, TEST_SPECIES)).toBe(50);
   });
 
   test("final form has 100% progress", () => {

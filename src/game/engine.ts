@@ -55,11 +55,12 @@ export function feedMonster(
   inputTokens: number,
   outputTokens: number,
   cacheTokens: number
-): { monster: Monster; feedResult: FeedResult; evolved: boolean; newStage?: Stage } {
+): { monster: Monster; feedResult: FeedResult; evolved: boolean; newStage?: Stage; leveledUp: boolean } {
   const feedResult = calculateFeedResult(inputTokens, outputTokens, cacheTokens, source);
+  const levelBefore = getLevel(monster.experience);
   let updated = applyFeed(monster, feedResult);
+  const levelAfter = getLevel(updated.experience);
 
-  // Play feed sound (off by default, user can enable)
   playSound("feed");
 
   // Record the feed
@@ -74,7 +75,7 @@ export function feedMonster(
 
   // Check evolution using level system
   const level = getLevel(updated.experience);
-  const targetStage = getTargetStage(updated.stage, level, species);
+  const targetStage = getTargetStage(updated.stage, level, species, updated.experience);
   let evolved = false;
   let newStage: Stage | undefined;
 
@@ -103,5 +104,7 @@ export function feedMonster(
   // Persist
   updated = updateMonster(updated);
 
-  return { monster: updated, feedResult, evolved, newStage };
+  const leveledUp = !evolved && levelAfter > levelBefore && monster.stage !== "egg";
+
+  return { monster: updated, feedResult, evolved, newStage, leveledUp };
 }

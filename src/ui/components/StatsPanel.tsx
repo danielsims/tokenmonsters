@@ -43,7 +43,42 @@ export function StatsPanel() {
   const nextLevelXp = useMemo(() => getXpForNextLevel(level), [level]);
   const currentForm = useMemo(() => getCurrentForm(species, monster.stage), [species, monster.stage]);
 
+  const isEgg = monster.stage === "egg";
+  const hatchXp = currentForm?.hatchXp;
   const evolvesAt = currentForm?.evolvesAtLevel;
+
+  if (isEgg) {
+    // Eggs: show XP progress toward hatching, no levels
+    const target = hatchXp ?? 50_000_000;
+    const hatchProgress = Math.min(100, (monster.experience / target) * 100);
+    const filled = Math.round(hatchProgress / 5);
+
+    return (
+      <box flexDirection="column" gap={0} paddingX={1}>
+        <StatBar label="Hunger" value={monster.hunger} max={100} />
+        <text fg={t.text.hidden}>{"─".repeat(34)}</text>
+        <StatBar label="Happiness" value={monster.happiness} max={100} />
+        <text fg={t.text.hidden}>{"─".repeat(34)}</text>
+        <StatBar label="Energy" value={monster.energy} max={100} />
+        <box height={1} />
+        <box flexDirection="row" gap={1}>
+          <text fg={t.text.muted}>{"Hatching".padEnd(10)}</text>
+          <text fg={t.accent.primary}>
+            {"\u2588".repeat(filled)}
+            {"\u2591".repeat(20 - filled)}
+            {" "}
+            {Math.round(hatchProgress)}%
+          </text>
+        </box>
+        <box flexDirection="row" gap={1}>
+          <text fg={t.text.muted}>{"XP".padEnd(10)}</text>
+          <text fg={t.text.secondary}>
+            {monster.experience.toLocaleString()} / {target.toLocaleString()}
+          </text>
+        </box>
+      </box>
+    );
+  }
 
   return (
     <box flexDirection="column" gap={0} paddingX={1}>

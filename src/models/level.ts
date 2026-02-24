@@ -1,11 +1,11 @@
-/** XP curve: egg hatches at 1.5M tokens, then level N costs N * 1M tokens.
+/** XP curve for post-hatch levelling. Eggs hatch via flat XP threshold (see species).
  *
  * Formula: XP(N) = 500_000 * (N² + N + 1) for N >= 1, XP(0) = 0
  *
  * Milestone reference (cumulative tokens):
- *   Lv.1  (hatch)      1.5M
- *   Lv.6  (evolve 1)   21.5M
- *   Lv.16 (evolve 2)   ~137M
+ *   Lv.1               1.5M
+ *   Lv.6               21.5M
+ *   Lv.16              ~137M
  *   Lv.50              ~1.3B
  *   Lv.100             ~5B
  */

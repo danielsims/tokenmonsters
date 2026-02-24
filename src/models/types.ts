@@ -7,7 +7,8 @@ export interface EvolutionForm {
   stage: Stage;
   name: string;
   description: string;
-  evolvesAtLevel: number | null; // null = final form
+  evolvesAtLevel: number | null; // null = final form or egg (eggs use hatchXp)
+  hatchXp?: number; // flat XP threshold for egg → hatchling (eggs only)
 }
 
 export interface Species {
