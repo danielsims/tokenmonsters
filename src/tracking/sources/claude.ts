@@ -62,7 +62,13 @@ function parseNewLines(filePath: string): UsageData[] {
   try {
     const stat = statSync(filePath);
     const currentSize = stat.size;
-    const lastSize = fileSizes.get(filePath) ?? 0;
+    const lastSize = fileSizes.get(filePath);
+
+    if (lastSize === undefined) {
+      // First time seeing this file — snapshot size, don't extract
+      fileSizes.set(filePath, currentSize);
+      return results;
+    }
 
     if (currentSize <= lastSize) {
       fileSizes.set(filePath, currentSize);
