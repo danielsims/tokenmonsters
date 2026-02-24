@@ -128,9 +128,10 @@ export function RegistryPreview({ species, formIndex, locked = false }: Registry
     readySceneRef.current = null;
     glbScene.ready.then(() => {
       if (cancelled) return;
-      if (lockedRef.current) {
-        try { darkenScene(glbScene.scene); } catch {}
-      }
+      // TODO: re-enable locked silhouette
+      // if (lockedRef.current) {
+      //   try { darkenScene(glbScene.scene); } catch {}
+      // }
       // Pre-rotate pivot to current animation time so the model doesn't
       // flash at its default orientation before renderBefore runs.
       glbScene.update(timeRef.current, 0);
