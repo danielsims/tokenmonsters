@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Texture Editor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #09090b;
+      color: #d4d4d8;
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ── */
+    #topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      border-bottom: 1px solid #27272a;
+      background: #18181b;
+      flex-shrink: 0;
+    }
+
+    #topbar h1 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #a1a1aa;
+      margin-right: 12px;
+    }
+
+    select, button {
+      font-family: inherit;
+      font-size: 11px;
+    }
+
+    .toolbar-select {
+      background: #27272a;
+      color: #d4d4d8;
+      border: 1px solid #3f3f46;
+      border-radius: 4px;
+      padding: 4px 8px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .toolbar-btn {
+      background: #27272a;
+      color: #a1a1aa;
+      border: 1px solid #3f3f46;
+      border-radius: 4px;
+      padding: 4px 12px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .toolbar-btn:hover { background: #3f3f46; color: #e4e4e7; }
+    .toolbar-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .toolbar-btn.primary {
+      background: #fafafa;
+      color: #18181b;
+      border: none;
+      font-weight: 600;
+    }
+
+    .toolbar-btn.primary:hover { background: #e4e4e7; }
+
+    .spacer { flex: 1; }
+
+    /* ── Panels ── */
+    #panels {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #editor-panel {
+      flex: 1;
+      min-width: 300px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #27272a;
+    }
+
+    #editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-bottom: 1px solid #27272a;
+      background: #18181b;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    #editor-toolbar label {
+      font-size: 10px;
+      color: #71717a;
+    }
+
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tool-btn {
+      background: #27272a;
+      color: #a1a1aa;
+      border: 1px solid #3f3f46;
+      border-radius: 3px;
+      padding: 3px 8px;
+      font-size: 10px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .tool-btn:hover { background: #3f3f46; }
+    .tool-btn.active { background: #52525b; color: #fafafa; border-color: #71717a; }
+
+    #color-picker {
+      width: 28px;
+      height: 24px;
+      border: 1px solid #3f3f46;
+      border-radius: 3px;
+      background: #18181b;
+      cursor: pointer;
+      padding: 1px;
+    }
+
+    #swatches {
+      display: flex;
+      gap: 2px;
+    }
+
+    .swatch {
+      width: 16px;
+      height: 16px;
+      border: 1px solid #3f3f46;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .swatch:hover { border-color: #a1a1aa; }
+
+    #canvas-wrap {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      cursor: crosshair;
+    }
+
+    #editor-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      image-rendering: pixelated;
+    }
+
+    #zoom-label {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      font-size: 10px;
+      color: #52525b;
+      pointer-events: none;
+    }
+
+    /* ── Preview panels ── */
+    #preview-hd {
+      width: 340px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #27272a;
+    }
+
+    #preview-pixelated {
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-header {
+      font-size: 10px;
+      color: #71717a;
+      padding: 6px 12px;
+      border-bottom: 1px solid #27272a;
+      background: #18181b;
+      flex-shrink: 0;
+    }
+
+    .preview-canvas-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #09090b;
+      overflow: hidden;
+    }
+
+    .preview-canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 9, 11, 0.88);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.hidden { display: none; }
+
+    .modal {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 620px;
+      width: 90%;
+    }
+
+    .modal h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .modal-compare {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .modal-compare > div {
+      flex: 1;
+      text-align: center;
+    }
+
+    .modal-compare canvas {
+      border: 1px solid #3f3f46;
+      border-radius: 4px;
+      image-rendering: pixelated;
+      max-width: 100%;
+    }
+
+    .modal-compare label {
+      display: block;
+      font-size: 10px;
+      color: #71717a;
+      margin-bottom: 4px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #27272a;
+      color: #d4d4d8;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 12px;
+      z-index: 300;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    #toast.hidden { opacity: 0; }
+
+    /* ── Loading state ── */
+    #loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #52525b;
+    }
+
+    #loading.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Top bar: model + texture selection -->
+  <div id="topbar">
+    <h1>Texture Editor</h1>
+    <select id="species-select" class="toolbar-select">
+      <option value="">Species...</option>
+    </select>
+    <select id="form-select" class="toolbar-select" disabled>
+      <option value="">Form...</option>
+    </select>
+    <select id="texture-select" class="toolbar-select" disabled>
+      <option value="">Texture...</option>
+    </select>
+    <div class="spacer"></div>
+    <button id="save-btn" class="toolbar-btn primary" disabled>Save</button>
+  </div>
+
+  <!-- Three panels -->
+  <div id="panels">
+    <!-- Left: pixel editor -->
+    <div id="editor-panel">
+      <div id="editor-toolbar">
+        <div class="tool-group">
+          <label>Brush</label>
+          <button class="tool-btn" data-brush="1">1</button>
+          <button class="tool-btn" data-brush="4">4</button>
+          <button class="tool-btn active" data-brush="16">16</button>
+          <button class="tool-btn" data-brush="32">32</button>
+          <button class="tool-btn" data-brush="64">64</button>
+          <button class="tool-btn" data-brush="128">128</button>
+        </div>
+        <div class="tool-group">
+          <input type="color" id="color-picker" value="#ff0000" />
+          <div id="swatches"></div>
+        </div>
+        <div class="tool-group">
+          <button class="tool-btn" id="undo-btn" title="Ctrl+Z">Undo</button>
+          <button class="tool-btn" id="redo-btn" title="Ctrl+Shift+Z">Redo</button>
+        </div>
+      </div>
+      <div id="canvas-wrap">
+        <canvas id="editor-canvas"></canvas>
+        <span id="zoom-label">1x</span>
+        <div id="loading">Select a model to begin</div>
+      </div>
+    </div>
+
+    <!-- Center: HD 3D preview -->
+    <div id="preview-hd">
+      <div class="preview-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>HD Preview</span>
+      <button id="paint-lock-btn" class="tool-btn" style="font-size:9px;">Paint: Off</button>
+    </div>
+      <div class="preview-canvas-wrap">
+        <canvas id="hd-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Right: terminal-pixelated preview -->
+    <div id="preview-pixelated">
+      <div class="preview-header">Terminal Preview</div>
+      <div class="preview-canvas-wrap">
+        <canvas id="pixel-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save modal (hidden) -->
+  <div id="save-modal" class="modal-overlay hidden"></div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden"></div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
