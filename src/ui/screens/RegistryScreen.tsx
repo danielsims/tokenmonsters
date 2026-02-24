@@ -214,14 +214,8 @@ function FormDetail({
         </span>
       </text>
       <text fg={locked ? t.text.hidden : t.text.muted}>
-        {locked ? "Not yet evolved." : species.description}
+        {locked ? "Not yet evolved." : form.description}
       </text>
-      {!locked && (
-        <>
-          <box height={1} />
-          <text fg={t.text.dim}>{form.description}</text>
-        </>
-      )}
     </box>
   );
 }
