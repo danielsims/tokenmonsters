@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Geometry Nudger</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #09090b; color: #d4d4d8; font-family: system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+  #select-box {
+    position: fixed; border: 1px solid #22d3ee; background: rgba(34,211,238,0.1);
+    pointer-events: none; z-index: 5; display: none;
+  }
+  #hud {
+    position: fixed; top: 12px; left: 12px; z-index: 10;
+    background: rgba(9,9,11,0.85); border: 1px solid #27272a; border-radius: 6px;
+    padding: 12px 16px; font-size: 12px; line-height: 1.6; max-width: 360px;
+    pointer-events: none;
+  }
+  #hud b { color: #fafafa; }
+  #hud .key { display: inline-block; background: #27272a; border: 1px solid #3f3f46; border-radius: 3px; padding: 0 5px; font-size: 11px; color: #a1a1aa; }
+  #controls {
+    position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 10;
+    display: flex; gap: 8px;
+  }
+  #controls button {
+    background: #27272a; color: #d4d4d8; border: 1px solid #3f3f46; border-radius: 4px;
+    padding: 8px 16px; font-family: inherit; font-size: 12px; cursor: pointer;
+  }
+  #controls button:hover { background: #3f3f46; }
+  #controls button.primary { background: #fafafa; color: #18181b; font-weight: 600; border: none; }
+  #status {
+    position: fixed; top: 12px; right: 12px; z-index: 10;
+    background: rgba(9,9,11,0.85); border: 1px solid #27272a; border-radius: 6px;
+    padding: 8px 12px; font-size: 11px; color: #71717a; max-width: 400px; word-break: break-all;
+  }
+  #island-log {
+    position: fixed; bottom: 60px; left: 12px; z-index: 10;
+    background: rgba(9,9,11,0.9); border: 1px solid #27272a; border-radius: 6px;
+    padding: 8px 12px; font-size: 11px; color: #71717a; max-height: 200px; overflow-y: auto;
+    display: none; font-family: monospace; min-width: 280px;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="hud">
+  <b>Geometry Nudger</b><br>
+  <span class="key">Click</span> select single island<br>
+  <span class="key">Alt+Drag</span> box select &mdash; finds all islands in rect<br>
+  <span class="key">Shift+Click</span> / <span class="key">Shift+Alt+Drag</span> add to selection<br>
+  <span class="key">R</span> clear selection &nbsp; <span class="key">C</span> copy island IDs<br>
+  <div id="sel-info" style="margin-top:6px;color:#71717a;">No selection</div>
+</div>
+<div id="status">Loading model...</div>
+<div id="island-log"></div>
+<div id="controls" style="display:none;">
+  <button id="btn-reset">Reset All</button>
+  <button id="btn-export" class="primary">Export GLB</button>
+</div>
+<div id="select-box"></div>
+<canvas id="c"></canvas>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+
+const canvas = document.getElementById("c");
+const statusEl = document.getElementById("status");
+const selInfo = document.getElementById("sel-info");
+const controlsDiv = document.getElementById("controls");
+const selectBox = document.getElementById("select-box");
+const islandLog = document.getElementById("island-log");
+
+// Renderer
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x1a1a2e);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+dir.position.set(3, 5, 4);
+scene.add(dir);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
+camera.position.set(0, 0.8, 2.5);
+
+const orbitControls = new OrbitControls(camera, canvas);
+orbitControls.enableDamping = true;
+orbitControls.dampingFactor = 0.08;
+orbitControls.target.set(0, 0.5, 0);
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// State
+let mesh = null;
+let geometry = null;
+let gltfScene = null;
+let islands = [];
+let faceToIsland = null;
+let selectedIslands = new Set(); // multi-select
+let originalPositions = null;
+let highlightColors = null;
+const undoStack = [];
+
+// Island centers cache
+let islandCenters = [];
+
+function buildIslands(geo) {
+  const index = geo.index;
+  const posAttr = geo.getAttribute("position");
+  const vertexCount = posAttr.count;
+  const faceCount = index ? index.count / 3 : vertexCount / 3;
+
+  statusEl.textContent = `Building islands (${vertexCount} verts, ${faceCount} faces)...`;
+
+  const vertToFaces = new Array(vertexCount);
+  for (let i = 0; i < vertexCount; i++) vertToFaces[i] = [];
+
+  for (let f = 0; f < faceCount; f++) {
+    const i0 = index ? index.getX(f * 3) : f * 3;
+    const i1 = index ? index.getX(f * 3 + 1) : f * 3 + 1;
+    const i2 = index ? index.getX(f * 3 + 2) : f * 3 + 2;
+    vertToFaces[i0].push(f);
+    vertToFaces[i1].push(f);
+    vertToFaces[i2].push(f);
+  }
+
+  const faceIslandArr = new Int32Array(faceCount).fill(-1);
+  const islandVertsArr = [];
+  let islandIdx = 0;
+
+  for (let f = 0; f < faceCount; f++) {
+    if (faceIslandArr[f] !== -1) continue;
+    const verts = new Set();
+    const queue = [f];
+    faceIslandArr[f] = islandIdx;
+
+    while (queue.length > 0) {
+      const cf = queue.pop();
+      const v0 = index ? index.getX(cf * 3) : cf * 3;
+      const v1 = index ? index.getX(cf * 3 + 1) : cf * 3 + 1;
+      const v2 = index ? index.getX(cf * 3 + 2) : cf * 3 + 2;
+      verts.add(v0); verts.add(v1); verts.add(v2);
+
+      for (const vi of [v0, v1, v2]) {
+        for (const nf of vertToFaces[vi]) {
+          if (faceIslandArr[nf] === -1) {
+            faceIslandArr[nf] = islandIdx;
+            queue.push(nf);
+          }
+        }
+      }
+    }
+
+    islandVertsArr.push(verts);
+    islandIdx++;
+  }
+
+  faceToIsland = faceIslandArr;
+  islands = islandVertsArr;
+
+  // Cache island centers (3D world positions)
+  const pos = geo.getAttribute("position");
+  islandCenters = islands.map((verts) => {
+    let sx = 0, sy = 0, sz = 0;
+    for (const vi of verts) {
+      sx += pos.getX(vi); sy += pos.getY(vi); sz += pos.getZ(vi);
+    }
+    const n = verts.size;
+    return new THREE.Vector3(sx / n, sy / n, sz / n);
+  });
+
+  statusEl.textContent = `${islands.length} islands. Click or Alt+Drag to select.`;
+}
+
+// Highlight all selected islands
+function highlightSelections() {
+  if (!highlightColors) {
+    highlightColors = new Float32Array(geometry.getAttribute("position").count * 3);
+  }
+  highlightColors.fill(1.0);
+
+  for (const islandId of selectedIslands) {
+    if (islandId < 0 || islandId >= islands.length) continue;
+    const verts = islands[islandId];
+    for (const vi of verts) {
+      highlightColors[vi * 3] = 0.2;
+      highlightColors[vi * 3 + 1] = 1.0;
+      highlightColors[vi * 3 + 2] = 1.0;
+    }
+  }
+
+  geometry.setAttribute("color", new THREE.BufferAttribute(highlightColors, 3));
+  geometry.attributes.color.needsUpdate = true;
+  mesh.material.vertexColors = true;
+  mesh.material.needsUpdate = true;
+
+  if (selectedIslands.size === 0) {
+    selInfo.textContent = "No selection";
+    islandLog.style.display = "none";
+  } else {
+    let totalVerts = 0;
+    for (const id of selectedIslands) totalVerts += islands[id].size;
+    selInfo.innerHTML = `<b>${selectedIslands.size}</b> islands selected (${totalVerts} verts)`;
+    // Show island list in log
+    const sorted = [...selectedIslands].sort((a, b) => a - b);
+    islandLog.style.display = "block";
+    islandLog.textContent = "IDs: " + sorted.join(", ");
+  }
+}
+
+// --- Box Select ---
+let boxStart = null;
+let isBoxSelecting = false;
+
+canvas.addEventListener("mousedown", (e) => {
+  if (!mesh || !e.altKey) return;
+  e.preventDefault();
+  orbitControls.enabled = false;
+  isBoxSelecting = true;
+  boxStart = { x: e.clientX, y: e.clientY };
+  selectBox.style.left = e.clientX + "px";
+  selectBox.style.top = e.clientY + "px";
+  selectBox.style.width = "0px";
+  selectBox.style.height = "0px";
+  selectBox.style.display = "block";
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  if (!isBoxSelecting) return;
+  const x = Math.min(boxStart.x, e.clientX);
+  const y = Math.min(boxStart.y, e.clientY);
+  const w = Math.abs(e.clientX - boxStart.x);
+  const h = Math.abs(e.clientY - boxStart.y);
+  selectBox.style.left = x + "px";
+  selectBox.style.top = y + "px";
+  selectBox.style.width = w + "px";
+  selectBox.style.height = h + "px";
+});
+
+canvas.addEventListener("mouseup", (e) => {
+  if (!isBoxSelecting) return;
+  isBoxSelecting = false;
+  selectBox.style.display = "none";
+  orbitControls.enabled = true;
+
+  const x1 = Math.min(boxStart.x, e.clientX);
+  const y1 = Math.min(boxStart.y, e.clientY);
+  const x2 = Math.max(boxStart.x, e.clientX);
+  const y2 = Math.max(boxStart.y, e.clientY);
+
+  if (x2 - x1 < 5 && y2 - y1 < 5) return; // too small, ignore
+
+  // Convert box to NDC
+  const ndcX1 = (x1 / window.innerWidth) * 2 - 1;
+  const ndcY1 = -(y1 / window.innerHeight) * 2 + 1;
+  const ndcX2 = (x2 / window.innerWidth) * 2 - 1;
+  const ndcY2 = -(y2 / window.innerHeight) * 2 + 1;
+
+  const ndcMinX = Math.min(ndcX1, ndcX2);
+  const ndcMaxX = Math.max(ndcX1, ndcX2);
+  const ndcMinY = Math.min(ndcY1, ndcY2);
+  const ndcMaxY = Math.max(ndcY1, ndcY2);
+
+  // Find islands whose center projects into the box
+  if (!e.shiftKey) selectedIslands.clear();
+
+  const vp = new THREE.Vector3();
+  for (let i = 0; i < islandCenters.length; i++) {
+    vp.copy(islandCenters[i]);
+    vp.project(camera);
+    if (vp.x >= ndcMinX && vp.x <= ndcMaxX && vp.y >= ndcMinY && vp.y <= ndcMaxY && vp.z > 0 && vp.z < 1) {
+      selectedIslands.add(i);
+    }
+  }
+
+  highlightSelections();
+  boxStart = null;
+});
+
+// --- Click Select ---
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+canvas.addEventListener("click", (e) => {
+  if (!mesh || e.altKey) return;
+
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+
+  const hits = raycaster.intersectObject(mesh);
+  if (hits.length === 0) {
+    if (!e.shiftKey) {
+      selectedIslands.clear();
+      highlightSelections();
+    }
+    return;
+  }
+
+  const faceIndex = hits[0].faceIndex;
+  const islandId = faceToIsland[faceIndex];
+
+  if (e.shiftKey) {
+    // Toggle
+    if (selectedIslands.has(islandId)) selectedIslands.delete(islandId);
+    else selectedIslands.add(islandId);
+  } else {
+    selectedIslands.clear();
+    selectedIslands.add(islandId);
+  }
+  highlightSelections();
+});
+
+// --- Keyboard ---
+window.addEventListener("keydown", (e) => {
+  if (!mesh) return;
+  const key = e.key.toLowerCase();
+
+  if (key === "r") {
+    selectedIslands.clear();
+    highlightSelections();
+  } else if (key === "c") {
+    // Copy island IDs to clipboard
+    const sorted = [...selectedIslands].sort((a, b) => a - b);
+    const text = sorted.join(",");
+    navigator.clipboard.writeText(text).then(() => {
+      statusEl.textContent = `Copied ${sorted.length} island IDs to clipboard`;
+    });
+  }
+});
+
+// --- Export ---
+document.getElementById("btn-export").addEventListener("click", () => {
+  if (!gltfScene) return;
+
+  if (geometry.hasAttribute("color")) {
+    geometry.deleteAttribute("color");
+    mesh.material.vertexColors = false;
+    mesh.material.needsUpdate = true;
+  }
+
+  const exporter = new GLTFExporter();
+  exporter.parse(gltfScene, (result) => {
+    const blob = new Blob([result], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pinchy-fixed.glb";
+    a.click();
+    URL.revokeObjectURL(url);
+    highlightSelections();
+    statusEl.textContent = "Exported pinchy-fixed.glb";
+  }, () => {
+    statusEl.textContent = "Export failed!";
+  }, { binary: true });
+});
+
+// --- Reset ---
+document.getElementById("btn-reset").addEventListener("click", () => {
+  if (!originalPositions || !geometry) return;
+  const pos = geometry.getAttribute("position");
+  pos.array.set(originalPositions);
+  pos.needsUpdate = true;
+  geometry.computeBoundingSphere();
+  undoStack.length = 0;
+  statusEl.textContent = "Reset to original positions.";
+});
+
+// --- Load model ---
+const loader = new GLTFLoader();
+const modelUrl = location.search.includes("nudged") ? "/pinchy-nudged.glb" : "/pinchy.glb";
+statusEl.textContent = "Loading " + modelUrl + "...";
+
+loader.load(modelUrl, (gltf) => {
+  gltfScene = gltf.scene;
+  scene.add(gltf.scene);
+
+  gltf.scene.traverse((child) => {
+    if (child.isMesh && !mesh) {
+      mesh = child;
+      geometry = child.geometry;
+    }
+  });
+
+  if (!mesh) {
+    statusEl.textContent = "No mesh found in model!";
+    return;
+  }
+
+  const pos = geometry.getAttribute("position");
+  originalPositions = new Float32Array(pos.array);
+
+  const box = new THREE.Box3().setFromObject(gltf.scene);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const dist = maxDim / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  camera.position.set(center.x, center.y + maxDim * 0.3, center.z + dist * 1.4);
+  orbitControls.target.copy(center);
+  camera.updateProjectionMatrix();
+
+  controlsDiv.style.display = "flex";
+  buildIslands(geometry);
+});
+
+// --- Render loop ---
+function animate() {
+  requestAnimationFrame(animate);
+  orbitControls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
