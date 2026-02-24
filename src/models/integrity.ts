@@ -1,7 +1,21 @@
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
+import { join } from "path";
+import { homedir } from "os";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import type { Monster } from "./types";
 
-const SECRET_KEY = process.env.MONSTER_HMAC_KEY ?? "token-monsters-default-hmac-key-v1";
+function loadOrCreateKey(): string {
+  if (process.env.MONSTER_HMAC_KEY) return process.env.MONSTER_HMAC_KEY;
+  const dir = join(homedir(), ".tokenmon");
+  const keyPath = join(dir, "hmac.key");
+  if (existsSync(keyPath)) return readFileSync(keyPath, "utf-8").trim();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  const key = randomBytes(32).toString("hex");
+  writeFileSync(keyPath, key + "\n", { mode: 0o600 });
+  return key;
+}
+
+const SECRET_KEY = loadOrCreateKey();
 
 /** Fields included in the checksum — order matters */
 function serializeForSigning(monster: Omit<Monster, "checksum">): string {
