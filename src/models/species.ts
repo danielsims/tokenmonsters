@@ -73,7 +73,7 @@ const STARTER_SPECIES: Species[] = [
     baseHungerRate: 2.5,
     baseHappinessRate: 3.0,
     forms: [
-      { stage: "egg", name: "Qwerty Egg", description: "An egg that rattles like a mechanical switch.", evolvesAtLevel: null, hatchXp: 5_000_000 },
+      { stage: "egg", name: "Keycap Egg", description: "An egg that rattles like a mechanical switch.", evolvesAtLevel: null, hatchXp: 5_000_000 },
       { stage: "hatchling", name: "Qwerty", description: "A tiny creature that skitters across keyboards, chattering in clicks.", evolvesAtLevel: 15 },
       { stage: "prime", name: "Daemon", description: "It runs silently in the background now. Always watching, never stopping.", evolvesAtLevel: null },
     ],
