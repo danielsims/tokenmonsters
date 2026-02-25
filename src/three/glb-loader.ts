@@ -262,6 +262,8 @@ export function loadGlbTestScene(
     background?: number;
     showGround?: boolean;
     yOffset?: number;
+    brightness?: number;
+    tint?: number;
   } = {},
 ): GLBSceneResult {
   const {
@@ -274,6 +276,8 @@ export function loadGlbTestScene(
     background = 0x2a3a5c,
     showGround = terminal.showGround,
     yOffset = 0,
+    brightness = 1.0,
+    tint,
   } = options;
 
   const scene = new THREE.Scene();
@@ -368,6 +372,26 @@ export function loadGlbTestScene(
 
         convertToDataTextures(model);
         swapToBasicMaterials(model);
+
+        // Per-model brightness / tint adjustment
+        if (brightness !== 1.0 || tint != null) {
+          const tintColor = tint != null ? new THREE.Color(tint) : null;
+          model.traverse((child) => {
+            if (!(child instanceof THREE.Mesh)) return;
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            for (const mat of mats) {
+              if (mat.color) {
+                if (brightness !== 1.0) {
+                  mat.color.multiplyScalar(brightness);
+                }
+                if (tintColor) {
+                  mat.color.lerp(tintColor, 0.3);
+                }
+              }
+            }
+          });
+        }
+
         mergeModelMeshes(model);
 
         const box = new THREE.Box3().setFromObject(model);

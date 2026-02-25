@@ -26,8 +26,8 @@
   },
   "gigabyte": {
     "background": "a8c4ff",
-    "targetHeight": 1.7,
-    "yOffset": 0.5
+    "targetHeight": 2,
+    "yOffset": -0.2
   },
   "pinchy": {
     "background": "73331d",
@@ -40,10 +40,24 @@
   },
   "gigaclaw": {
     "background": "b47227",
-    "targetHeight": 1.5
+    "targetHeight": 1.35
   },
   "molting-egg": {
     "background": "2a3a5c",
     "targetHeight": 0.75
+  },
+  "daemon": {
+    "background": "cccccc",
+    "targetHeight": 1.8,
+    "yOffset": 0,
+    "brightness": 2.5
+  },
+  "qwerty": {
+    "background": "cccccc",
+    "targetHeight": 1.05
+  },
+  "keycap-egg": {
+    "background": "cccccc",
+    "targetHeight": 0.7
   }
 }

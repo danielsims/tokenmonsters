@@ -14,6 +14,9 @@ interface SpeciesConfig {
   cameraDistance?: number;
   cameraHeight?: number;
   lookAtHeight?: number;
+  yOffset?: number;
+  brightness?: number;
+  tint?: number;
 }
 
 function getGlbModelForForm(species: Species, formIndex: number): string | null {
@@ -38,6 +41,9 @@ function loadFormConfig(formName: string): SpeciesConfig {
     if (formData.cameraDistance != null) config.cameraDistance = formData.cameraDistance;
     if (formData.cameraHeight != null) config.cameraHeight = formData.cameraHeight;
     if (formData.lookAtHeight != null) config.lookAtHeight = formData.lookAtHeight;
+    if (formData.yOffset != null) config.yOffset = formData.yOffset;
+    if (formData.brightness != null) config.brightness = formData.brightness;
+    if (formData.tint != null) config.tint = parseInt(String(formData.tint), 16);
     return config;
   } catch {
     return {};
