@@ -125,7 +125,8 @@ export default defineConfig({
 
         // Serve GLB files from models dir: /models/:form.glb
         server.middlewares.use("/models", (req, res, next) => {
-          const filePath = resolve(modelsDir, req.url.replace(/^\//, ""));
+          const cleanUrl = req.url.replace(/^\//, "").replace(/\?.*$/, "");
+          const filePath = resolve(modelsDir, cleanUrl);
           if (existsSync(filePath) && filePath.endsWith(".glb")) {
             const data = readFileSync(filePath);
             res.setHeader("Content-Type", "model/gltf-binary");
