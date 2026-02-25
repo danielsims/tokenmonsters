@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Your AI tokens are feeding something.",
   "type": "module",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "author": "Token Monsters",
   "engines": {
     "bun": ">=1.0.0"
@@ -12,8 +12,9 @@
     "tokenmon": "./bin/tokenmon"
   },
   "files": [
-    "bin",
+    "bin/tokenmon",
     "src",
+    "!src/three/glb-loader-debug.log",
     "daemon",
     "scripts",
     "tsconfig.json"
