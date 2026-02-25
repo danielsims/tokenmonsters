@@ -9,6 +9,37 @@ const SESSIONS_DIR = join(homedir(), ".codex", "sessions");
 const fileSizes = new Map<string, number>();
 let initialized = false;
 
+export interface CodexTokens {
+  input: number;
+  output: number;
+  cache: number;
+}
+
+/** Sanitize a token count: must be a non-negative finite number */
+function safeToken(v: unknown): number {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(Math.floor(n), Number.MAX_SAFE_INTEGER);
+}
+
+/** Parse a single Codex JSONL line into token counts, or null if not a token_count event */
+export function parseCodexLine(line: string): CodexTokens | null {
+  if (!line || !line.trim()) return null;
+  try {
+    const entry = JSON.parse(line);
+    if (entry.type !== "event_msg" || entry.payload?.type !== "token_count") return null;
+    const usage = entry.payload.info?.last_token_usage;
+    if (!usage || typeof usage !== "object") return null;
+    return {
+      input: safeToken(usage.input_tokens),
+      output: safeToken(usage.output_tokens) + safeToken(usage.reasoning_output_tokens),
+      cache: safeToken(usage.cached_input_tokens),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Find recently-active Codex session JSONL files (modified in last 10 min) */
 function getSessionFiles(): string[] {
   const files: string[] = [];
@@ -68,22 +99,8 @@ function parseNewLines(filePath: string): { input: number; output: number; cache
 
     const lines = newContent.trim().split("\n");
     for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const entry = JSON.parse(line);
-
-        // Codex stores usage in event_msg entries with payload.type = "token_count"
-        if (entry.type === "event_msg" && entry.payload?.type === "token_count") {
-          const usage = entry.payload.info?.last_token_usage;
-          if (usage) {
-            results.push({
-              input: usage.input_tokens ?? 0,
-              output: (usage.output_tokens ?? 0) + (usage.reasoning_output_tokens ?? 0),
-              cache: usage.cached_input_tokens ?? 0,
-            });
-          }
-        }
-      } catch { continue; }
+      const tokens = parseCodexLine(line);
+      if (tokens) results.push(tokens);
     }
   } catch {}
 

@@ -10,11 +10,36 @@ const PROJECTS_DIR = join(CLAUDE_DIR, "projects");
 const fileSizes = new Map<string, number>();
 let initialized = false;
 
-interface UsageData {
-  input_tokens?: number;
-  output_tokens?: number;
-  cache_read_input_tokens?: number;
-  cache_creation_input_tokens?: number;
+export interface UsageData {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens: number;
+  cache_creation_input_tokens: number;
+}
+
+/** Sanitize a token count: must be a non-negative finite number */
+function safeToken(v: unknown): number {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(Math.floor(n), Number.MAX_SAFE_INTEGER);
+}
+
+/** Parse a single Claude JSONL line into usage data, or null if invalid */
+export function parseClaudeLine(line: string): UsageData | null {
+  if (!line || !line.trim()) return null;
+  try {
+    const entry = JSON.parse(line);
+    const usage = entry.message?.usage ?? entry.usage;
+    if (!usage || typeof usage !== "object") return null;
+    return {
+      input_tokens: safeToken(usage.input_tokens),
+      output_tokens: safeToken(usage.output_tokens),
+      cache_read_input_tokens: safeToken(usage.cache_read_input_tokens),
+      cache_creation_input_tokens: safeToken(usage.cache_creation_input_tokens),
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** Find recently-active JSONL session files (modified in last 10 min) */
@@ -86,17 +111,8 @@ function parseNewLines(filePath: string): UsageData[] {
 
     const lines = newContent.trim().split("\n");
     for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const entry = JSON.parse(line);
-        // Usage lives at message.usage in Claude Code JSONL
-        const usage = entry.message?.usage ?? entry.usage;
-        if (usage) {
-          results.push(usage);
-        }
-      } catch {
-        continue;
-      }
+      const usage = parseClaudeLine(line);
+      if (usage) results.push(usage);
     }
   } catch {
     // ignore read errors
