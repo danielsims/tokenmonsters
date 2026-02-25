@@ -1,4 +1,6 @@
-# tokenmon
+<p align="center">
+  <img src="tokenmon.png" alt="tokenmon" width="700" />
+</p>
 
 Your AI tokens are feeding something.
 

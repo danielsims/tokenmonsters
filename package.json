@@ -17,7 +17,8 @@
     "!src/three/glb-loader-debug.log",
     "daemon",
     "scripts",
-    "tsconfig.json"
+    "tsconfig.json",
+    "tokenmon.png"
   ],
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
