@@ -9,6 +9,7 @@ const IDLE_THRESHOLD = 30_000;
 
 interface PendingEvolution {
   newStage: Stage;
+  fromStage: Stage;
 }
 
 interface GameState {
@@ -17,6 +18,7 @@ interface GameState {
   recentFeeds: TokenFeed[];
   isEvolving: boolean;
   evolutionTarget: string | null;
+  evolutionFromStage: Stage | null;
   evolutionPending: boolean;
   daemonConnected: boolean;
 }
@@ -45,6 +47,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [recentFeeds, setRecentFeeds] = useState<TokenFeed[]>([]);
   const [isEvolving, setIsEvolving] = useState(false);
   const [evolutionTarget, setEvolutionTarget] = useState<string | null>(null);
+  const [evolutionFromStage, setEvolutionFromStage] = useState<Stage | null>(null);
   const [daemonConnected, setDaemonConnected] = useState(false);
   const pendingRef = useRef<PendingEvolution | null>(null);
   const [evolutionPending, setEvolutionPending] = useState(false);
@@ -95,6 +98,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const pending = pendingRef.current;
         pendingRef.current = null;
         setEvolutionPending(false);
+        setEvolutionFromStage(pending.fromStage);
         setEvolutionTarget(pending.newStage);
         setIsEvolving(true);
       }
@@ -124,13 +128,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
 
       if (result.evolved && result.newStage) {
+        const fromStage = freshMonster.stage;
         const idle = Date.now() - lastKeystrokeAt > IDLE_THRESHOLD;
         if (idle) {
           // User is AFK — loop alert and queue the evolution screen
           startAlert(30_000);
-          pendingRef.current = { newStage: result.newStage };
+          pendingRef.current = { newStage: result.newStage, fromStage };
           setEvolutionPending(true);
         } else {
+          setEvolutionFromStage(fromStage);
           setEvolutionTarget(result.newStage);
           setIsEvolving(true);
         }
@@ -166,6 +172,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         recentFeeds,
         isEvolving,
         evolutionTarget,
+        evolutionFromStage,
         evolutionPending,
         daemonConnected,
         refresh,

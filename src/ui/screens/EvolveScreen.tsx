@@ -1,68 +1,289 @@
-import { useState, useEffect } from "react";
+import * as THREE from "three";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useGame } from "../../game/context";
 import { getCurrentForm } from "../../models/evolution";
+import { loadGlbTestScene } from "../../three/glb-loader";
 import { playSound } from "../../audio/player";
-import { t } from "../theme";
+import { resolve } from "path";
+import { existsSync } from "fs";
+import type { Species, Stage } from "../../models/types";
+import { t, getSceneBg } from "../theme";
+
+const modelsRoot = resolve(import.meta.dir, "../../three/models");
+
+type Phase = "from-white" | "flicker" | "reveal" | "complete";
+
+interface SpeciesConfig {
+  targetHeight?: number;
+  cameraDistance?: number;
+  cameraHeight?: number;
+  lookAtHeight?: number;
+  yOffset?: number;
+}
+
+function getGlbPath(species: Species, stage: Stage): string | null {
+  const form = species.forms.find((f) => f.stage === stage);
+  if (!form) return null;
+  const formName = form.name.toLowerCase().replace(/\s+/g, "-");
+  const path = resolve(modelsRoot, formName + ".glb");
+  if (existsSync(path)) return path;
+  return null;
+}
+
+function loadFormConfig(formName: string): SpeciesConfig {
+  try {
+    const configPath = resolve(modelsRoot, "config.json");
+    if (!existsSync(configPath)) return {};
+    const raw = JSON.parse(require("fs").readFileSync(configPath, "utf-8"));
+    const formData = raw[formName] ?? {};
+    const config: SpeciesConfig = {};
+    if (formData.targetHeight != null) config.targetHeight = formData.targetHeight;
+    if (formData.cameraDistance != null) config.cameraDistance = formData.cameraDistance;
+    if (formData.cameraHeight != null) config.cameraHeight = formData.cameraHeight;
+    if (formData.lookAtHeight != null) config.lookAtHeight = formData.lookAtHeight;
+    if (formData.yOffset != null) config.yOffset = formData.yOffset;
+    return config;
+  } catch {
+    return {};
+  }
+}
+
+/** Turn all model meshes white and strip textures */
+function whitenScene(scene: THREE.Scene) {
+  const white = new THREE.Color(0xffffff);
+  for (const child of scene.children) {
+    if (!(child instanceof THREE.Group)) continue;
+    child.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      for (const mat of materials) {
+        if (mat.color) mat.color.copy(white);
+        if (mat.map) {
+          mat.map = null;
+          mat.needsUpdate = true;
+        }
+        if (mat.emissive) mat.emissive.setScalar(0);
+        if (mat.emissiveMap) {
+          mat.emissiveMap = null;
+          mat.needsUpdate = true;
+        }
+      }
+    });
+  }
+}
+
+function loadScene(species: Species, stage: Stage, whiten: boolean) {
+  const glbPath = getGlbPath(species, stage);
+  if (!glbPath) return null;
+
+  const form = species.forms.find((f) => f.stage === stage);
+  const formName = form ? form.name.toLowerCase().replace(/\s+/g, "-") : "";
+  const config = formName ? loadFormConfig(formName) : {};
+
+  const scene = loadGlbTestScene(glbPath, {
+    targetHeight: 1.4,
+    cameraDistance: 3.2,
+    orbitSpeed: 0.3,
+    ...config,
+    background: getSceneBg(),
+  });
+
+  if (whiten) {
+    scene.ready = scene.ready.then(() => {
+      whitenScene(scene.scene);
+    });
+  }
+
+  return scene;
+}
 
 export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
-  const { monster, species } = useGame();
+  const { monster, species, evolutionFromStage, evolutionTarget } = useGame();
+  const [phase, setPhase] = useState<Phase>("from-white");
   const [dots, setDots] = useState(0);
-  const [complete, setComplete] = useState(false);
+  const [flickerShow, setFlickerShow] = useState<"from" | "to">("from");
+  const timeRef = useRef(0);
+
+  const fromStage = evolutionFromStage ?? "egg";
+  const toStage = (evolutionTarget ?? monster?.stage ?? "hatchling") as Stage;
+
+  // Load all 3 scenes
+  const fromWhite = useMemo(
+    () => species ? loadScene(species, fromStage, true) : null,
+    [species?.id, fromStage],
+  );
+  const toWhite = useMemo(
+    () => species ? loadScene(species, toStage, true) : null,
+    [species?.id, toStage],
+  );
+  const toFull = useMemo(
+    () => species ? loadScene(species, toStage, false) : null,
+    [species?.id, toStage],
+  );
+
+  // Track readiness of each scene
+  const [fromReady, setFromReady] = useState(false);
+  const [toWhiteReady, setToWhiteReady] = useState(false);
+  const [toFullReady, setToFullReady] = useState(false);
 
   useEffect(() => {
-    const dotInterval = setInterval(() => {
-      setDots((d) => (d + 1) % 4);
-    }, 400);
+    if (!fromWhite) return;
+    let cancelled = false;
+    fromWhite.ready.then(() => { if (!cancelled) setFromReady(true); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [fromWhite]);
 
-    const completeTimer = setTimeout(() => {
-      clearInterval(dotInterval);
-      setComplete(true);
+  useEffect(() => {
+    if (!toWhite) return;
+    let cancelled = false;
+    toWhite.ready.then(() => { if (!cancelled) setToWhiteReady(true); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [toWhite]);
+
+  useEffect(() => {
+    if (!toFull) return;
+    let cancelled = false;
+    toFull.ready.then(() => { if (!cancelled) setToFullReady(true); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [toFull]);
+
+  // Animation state machine — only starts once from scene is ready
+  useEffect(() => {
+    if (!fromReady) return;
+
+    // Dot animation
+    const dotInterval = setInterval(() => setDots((d) => (d + 1) % 4), 400);
+
+    // Phase transitions
+    const flickerTimer = setTimeout(() => setPhase("flicker"), 2000);
+
+    const revealTimer = setTimeout(() => {
+      setPhase("reveal");
       playSound("evolve-complete");
-      setTimeout(onComplete, 2500);
-    }, 3000);
+    }, 4500);
+
+    const completeTimer = setTimeout(() => setPhase("complete"), 4500);
+
+    const doneTimer = setTimeout(onComplete, 7000);
 
     return () => {
       clearInterval(dotInterval);
+      clearTimeout(flickerTimer);
+      clearTimeout(revealTimer);
       clearTimeout(completeTimer);
+      clearTimeout(doneTimer);
     };
-  }, [onComplete]);
+  }, [fromReady, onComplete]);
 
-  const form = monster && species ? getCurrentForm(species, monster.stage) : null;
-  const formName = form?.name ?? "???";
+  // Flicker effect during flicker phase — accelerating frequency
+  useEffect(() => {
+    if (phase !== "flicker") return;
+
+    const startTime = Date.now();
+    let timeout: ReturnType<typeof setTimeout>;
+
+    function tick() {
+      const elapsed = Date.now() - startTime;
+      // Start at 400ms intervals, decrease to 80ms over 2.5s
+      const progress = Math.min(1, elapsed / 2500);
+      const interval = 400 - progress * 320;
+
+      setFlickerShow((prev) => (prev === "from" ? "to" : "from"));
+      timeout = setTimeout(tick, interval);
+    }
+
+    timeout = setTimeout(tick, 400);
+    return () => clearTimeout(timeout);
+  }, [phase]);
+
+  // Determine which scene to display
+  const displayScene = useMemo(() => {
+    if (phase === "from-white") return fromReady ? fromWhite : null;
+    if (phase === "flicker") {
+      if (flickerShow === "from") return fromReady ? fromWhite : null;
+      return toWhiteReady ? toWhite : (fromReady ? fromWhite : null);
+    }
+    // reveal / complete
+    return toFullReady ? toFull : (toWhiteReady ? toWhite : null);
+  }, [phase, flickerShow, fromWhite, toWhite, toFull, fromReady, toWhiteReady, toFullReady]);
+
+  const displayRef = useRef<typeof displayScene>(null);
+  if (displayScene) displayRef.current = displayScene;
+
+  const renderBefore = useCallback(
+    (_buffer: any, deltaTime: number) => {
+      const scene = displayRef.current;
+      if (!scene) return;
+      const dt = deltaTime / 1000;
+      timeRef.current += dt;
+
+      const MAX_ASPECT = 1.2;
+      const aspect = scene.camera.aspect;
+      if (aspect > MAX_ASPECT) {
+        scene.camera.position.z = 3.2 * (aspect / MAX_ASPECT);
+      }
+
+      scene.update(timeRef.current, 0);
+    },
+    [],
+  );
+
+  const toForm = species ? getCurrentForm(species, toStage) : null;
+  const displayName = monster?.name
+    ? monster.name.charAt(0).toUpperCase() + monster.name.slice(1)
+    : (species?.name ?? "Your monster");
+  const toName = toForm?.name ?? "???";
   const dotStr = ".".repeat(dots);
 
+  const display = displayRef.current;
+
+  if (!display) {
+    return (
+      <box
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        width="100%"
+        height="100%"
+        backgroundColor={t.bg.base}
+      >
+        <text fg={t.text.muted}>Preparing evolution...</text>
+      </box>
+    );
+  }
+
   return (
-    <box
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      width="100%"
-      height="100%"
-      backgroundColor={t.bg.base}
-    >
-      {!complete ? (
-        <>
+    <box flexDirection="column" width="100%" height="100%" backgroundColor={t.bg.base}>
+      {/* Text overlay */}
+      <box height={3} justifyContent="center" alignItems="center">
+        {(phase === "from-white" || phase === "flicker") && (
           <text fg={t.accent.primary}>
-            <strong>EVOLVING{dotStr}</strong>
+            <strong>{displayName} is evolving{dotStr}</strong>
           </text>
-          <box height={1} />
-          <text fg={t.text.secondary}>Your monster is transforming!</text>
-          <box height={1} />
-          <text fg={t.accent.warm}>
-            {"*".repeat(20 + dots * 5)}
-          </text>
-        </>
-      ) : (
-        <>
-          <text fg={t.accent.green}>
-            <strong>EVOLUTION COMPLETE!</strong>
-          </text>
-          <box height={1} />
-          <text fg={t.text.primary}>
-            Your monster evolved to <strong fg={t.accent.primary}>{formName}</strong>!
-          </text>
-        </>
-      )}
+        )}
+        {(phase === "reveal" || phase === "complete") && (
+          <box flexDirection="column" alignItems="center">
+            <text fg={t.accent.green}>
+              <strong>Evolution complete!</strong>
+            </text>
+            <text fg={t.text.secondary}>
+              {displayName} evolved into <strong fg={t.accent.primary}>{toName}</strong>!
+            </text>
+          </box>
+        )}
+      </box>
+
+      {/* 3D scene */}
+      <box flexGrow={1}>
+        <threeScene
+          scene={display.scene}
+          camera={display.camera}
+          autoAspect
+          flexGrow={1}
+          width="100%"
+          renderBefore={renderBefore}
+        />
+      </box>
     </box>
   );
 }

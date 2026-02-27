@@ -17,7 +17,7 @@ type Screen = "welcome" | "home" | "info" | "hatch" | "evolve" | "registry" | "p
 
 function AppInner() {
   const renderer = useRenderer();
-  const { monster, isEvolving, setEvolving, reportKeystroke } = useGame();
+  const { monster, isEvolving, evolutionFromStage, setEvolving, reportKeystroke } = useGame();
   const { isFirstRun, generateEgg } = useMonster();
   useGameLoop();
 
@@ -36,7 +36,7 @@ function AppInner() {
   // Handle evolution events
   if (isEvolving && screen !== "evolve" && screen !== "hatch") {
     // Determine if this is egg→hatchling (hatch) or other evolution
-    if (monster?.stage === "hatchling") {
+    if (evolutionFromStage === "egg") {
       setScreen("hatch");
     } else {
       setScreen("evolve");
