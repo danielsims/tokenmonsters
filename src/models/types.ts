@@ -1,6 +1,6 @@
 export type Rarity = "common" | "uncommon" | "rare" | "legendary";
 export type Stage = "egg" | "hatchling" | "prime" | "apex";
-export type Origin = "generated" | "gifted";
+export type Origin = "generated" | "gifted" | "minted";
 export type TokenSource = "claude" | "codex" | "opencode";
 
 export interface EvolutionForm {
@@ -38,6 +38,11 @@ export interface Monster {
   checksum: string;
   origin: Origin;
   originFrom: string | null;
+  mintAddress: string | null;
+  mintNetwork: string | null;
+  claimedBy: string | null;
+  /** Computed at load time — true if HMAC checksum doesn't match */
+  tampered: boolean;
 }
 
 export interface TokenFeed {

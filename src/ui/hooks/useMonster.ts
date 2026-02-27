@@ -35,6 +35,9 @@ export function useMonster() {
       evolvedAt: null,
       origin: "generated",
       originFrom: null,
+      mintAddress: null,
+      mintNetwork: null,
+      claimedBy: null,
     };
 
     createMonster(monsterData);
@@ -64,6 +67,9 @@ export function useMonster() {
       evolvedAt: null,
       origin: "generated",
       originFrom: null,
+      mintAddress: null,
+      mintNetwork: null,
+      claimedBy: null,
     };
 
     createMonster(monsterData);

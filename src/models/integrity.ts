@@ -17,8 +17,10 @@ function loadOrCreateKey(): string {
 
 const SECRET_KEY = loadOrCreateKey();
 
-/** Fields included in the checksum — order matters */
-function serializeForSigning(monster: Omit<Monster, "checksum">): string {
+/** Fields included in the checksum — order matters.
+ * IMPORTANT: Adding new fields here will invalidate existing checksums.
+ * A re-sign migration must be added to schema.ts when this changes. */
+function serializeForSigning(monster: Omit<Monster, "checksum" | "tampered">): string {
   return JSON.stringify([
     monster.id,
     monster.speciesId,
@@ -33,11 +35,14 @@ function serializeForSigning(monster: Omit<Monster, "checksum">): string {
     monster.evolvedAt,
     monster.origin,
     monster.originFrom,
+    monster.mintAddress,
+    monster.mintNetwork,
+    monster.claimedBy,
   ]);
 }
 
 /** Sign a monster's state, returning the HMAC-SHA256 checksum */
-export function signMonster(monster: Omit<Monster, "checksum">): string {
+export function signMonster(monster: Omit<Monster, "checksum" | "tampered">): string {
   const data = serializeForSigning(monster);
   return createHmac("sha256", SECRET_KEY).update(data).digest("hex");
 }
