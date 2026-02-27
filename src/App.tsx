@@ -7,7 +7,7 @@ import { HomeScreen } from "./ui/screens/HomeScreen";
 import { InfoScreen } from "./ui/screens/InfoScreen";
 import { HatchScreen } from "./ui/screens/HatchScreen";
 import { EvolveScreen } from "./ui/screens/EvolveScreen";
-import { WelcomeScreen } from "./ui/screens/WelcomeScreen";
+import { OnboardingScreen } from "./ui/screens/OnboardingScreen";
 import { RegistryScreen } from "./ui/screens/RegistryScreen";
 import { PartyScreen } from "./ui/screens/PartyScreen";
 import { getSetting, setSetting } from "./db/queries";
@@ -50,7 +50,7 @@ function AppInner() {
 
   const handleWelcomeComplete = useCallback(
     (_name: string) => {
-      // Egg generation + naming handled in WelcomeScreen
+      // Egg generation + naming handled in OnboardingScreen
       setScreen("home");
     },
     []
@@ -96,7 +96,7 @@ function AppInner() {
 
   switch (screen) {
     case "welcome":
-      return <WelcomeScreen onComplete={handleWelcomeComplete} />;
+      return <OnboardingScreen onComplete={handleWelcomeComplete} />;
     case "home":
       return <HomeScreen />;
     case "info":

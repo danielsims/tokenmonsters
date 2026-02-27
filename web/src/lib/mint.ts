@@ -14,7 +14,7 @@ const NFT_SYMBOL = "TMON"; // Token Monsters
 const SELLER_FEE_BPS = 500; // 5%
 
 /** Treasury wallet that receives mint payments. Set via NEXT_PUBLIC_TREASURY_WALLET env var. */
-const TREASURY_WALLET = process.env.NEXT_PUBLIC_TREASURY_WALLET ?? "";
+const TREASURY_WALLET = (process.env.NEXT_PUBLIC_TREASURY_WALLET ?? "").trim();
 
 export interface MintParams {
   wallet: WalletAdapter;
