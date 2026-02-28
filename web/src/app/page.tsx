@@ -139,13 +139,6 @@ export default function Home() {
   async function handleMint() {
     if (!connected || !wallet?.adapter) return;
 
-    // If already in progress (user closed wallet and retried), reset first
-    if (mintState === "minting" || mintState === "confirming") {
-      setMintState("idle");
-      setError(null);
-      return;
-    }
-
     setMintState("minting");
     setError(null);
 
@@ -294,17 +287,27 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-3">
-              <button
-                onClick={handleMint}
-                disabled={!canAfford && species.priceLamports > 0}
-                className="w-full py-2.5 bg-zinc-800 border border-zinc-600 text-zinc-200 rounded hover:bg-zinc-700 hover:border-zinc-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-mono"
-              >
-                {mintState === "minting"
-                  ? "building tx..."
-                  : mintState === "confirming"
-                    ? "approve in wallet..."
-                    : `⏎ Mint — ${formatPrice(species.priceLamports)}`}
-              </button>
+              {(mintState === "minting" || mintState === "confirming") ? (
+                <div className="space-y-2">
+                  <div className="w-full py-2.5 bg-zinc-800 border border-zinc-600 text-zinc-400 rounded text-sm font-mono text-center">
+                    {mintState === "minting" ? "building tx..." : "approve in wallet..."}
+                  </div>
+                  <button
+                    onClick={() => { setMintState("idle"); setError(null); }}
+                    className="w-full py-1.5 text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
+                  >
+                    cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleMint}
+                  disabled={!canAfford && species.priceLamports > 0}
+                  className="w-full py-2.5 bg-zinc-800 border border-zinc-600 text-zinc-200 rounded hover:bg-zinc-700 hover:border-zinc-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-mono"
+                >
+                  ⏎ Mint — {formatPrice(species.priceLamports)}
+                </button>
+              )}
 
               {mintState === "error" && error && (
                 <p className="text-red-400 text-xs font-sans">{error}</p>
