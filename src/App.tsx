@@ -33,9 +33,9 @@ function AppInner() {
     return "home";
   });
 
-  // Handle evolution events
-  if (isEvolving && screen !== "evolve" && screen !== "hatch") {
-    // Determine if this is egg→hatchling (hatch) or other evolution
+  // Handle evolution events — wait for both isEvolving AND evolutionFromStage
+  // to be set before routing, otherwise the else branch fires prematurely
+  if (isEvolving && evolutionFromStage !== null && screen !== "evolve" && screen !== "hatch") {
     if (evolutionFromStage === "egg") {
       setScreen("hatch");
     } else {
@@ -62,12 +62,12 @@ function AppInner() {
   });
 
   useKeyboard((key) => {
-    if (screen === "welcome" || screen === "hatch" || screen === "evolve") return;
-
     if (key.name === "q" || (key.ctrl && key.name === "c")) {
       renderer.destroy();
       return;
     }
+
+    if (screen === "welcome" || screen === "hatch" || screen === "evolve") return;
 
     if (key.name === "i" || key.name === "tab") {
       setScreen((s) => (s === "info" ? "home" : "info"));

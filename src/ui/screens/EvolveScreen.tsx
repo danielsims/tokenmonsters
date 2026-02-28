@@ -11,7 +11,7 @@ import { t, getSceneBg } from "../theme";
 
 const modelsRoot = resolve(import.meta.dir, "../../three/models");
 
-type Phase = "from-white" | "flicker" | "reveal" | "complete";
+type Phase = "show-from" | "flicker" | "reveal" | "complete";
 
 interface SpeciesConfig {
   targetHeight?: number;
@@ -99,7 +99,7 @@ function loadScene(species: Species, stage: Stage, whiten: boolean) {
 
 export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
   const { monster, species, evolutionFromStage, evolutionTarget } = useGame();
-  const [phase, setPhase] = useState<Phase>("from-white");
+  const [phase, setPhase] = useState<Phase>("show-from");
   const [dots, setDots] = useState(0);
   const [flickerShow, setFlickerShow] = useState<"from" | "to">("from");
   const timeRef = useRef(0);
@@ -107,7 +107,11 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
   const fromStage = evolutionFromStage ?? "egg";
   const toStage = (evolutionTarget ?? monster?.stage ?? "hatchling") as Stage;
 
-  // Load all 3 scenes
+  // Load all 4 scenes
+  const fromFull = useMemo(
+    () => species ? loadScene(species, fromStage, false) : null,
+    [species?.id, fromStage],
+  );
   const fromWhite = useMemo(
     () => species ? loadScene(species, fromStage, true) : null,
     [species?.id, fromStage],
@@ -121,15 +125,23 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
     [species?.id, toStage],
   );
 
-  // Track readiness of each scene
-  const [fromReady, setFromReady] = useState(false);
+  // Track readiness
+  const [fromFullReady, setFromFullReady] = useState(false);
+  const [fromWhiteReady, setFromWhiteReady] = useState(false);
   const [toWhiteReady, setToWhiteReady] = useState(false);
   const [toFullReady, setToFullReady] = useState(false);
 
   useEffect(() => {
+    if (!fromFull) return;
+    let cancelled = false;
+    fromFull.ready.then(() => { if (!cancelled) setFromFullReady(true); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [fromFull]);
+
+  useEffect(() => {
     if (!fromWhite) return;
     let cancelled = false;
-    fromWhite.ready.then(() => { if (!cancelled) setFromReady(true); }).catch(() => {});
+    fromWhite.ready.then(() => { if (!cancelled) setFromWhiteReady(true); }).catch(() => {});
     return () => { cancelled = true; };
   }, [fromWhite]);
 
@@ -147,14 +159,13 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
     return () => { cancelled = true; };
   }, [toFull]);
 
-  // Animation state machine — only starts once from scene is ready
+  // Animation state machine — starts once textured from scene is ready
   useEffect(() => {
-    if (!fromReady) return;
+    if (!fromFullReady) return;
 
-    // Dot animation
     const dotInterval = setInterval(() => setDots((d) => (d + 1) % 4), 400);
 
-    // Phase transitions
+    // show-from (textured) for 2s, then flicker
     const flickerTimer = setTimeout(() => setPhase("flicker"), 2000);
 
     const revealTimer = setTimeout(() => {
@@ -173,9 +184,9 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
       clearTimeout(completeTimer);
       clearTimeout(doneTimer);
     };
-  }, [fromReady, onComplete]);
+  }, [fromFullReady, onComplete]);
 
-  // Flicker effect during flicker phase — accelerating frequency
+  // Flicker effect — accelerating frequency
   useEffect(() => {
     if (phase !== "flicker") return;
 
@@ -184,7 +195,6 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
 
     function tick() {
       const elapsed = Date.now() - startTime;
-      // Start at 400ms intervals, decrease to 80ms over 2.5s
       const progress = Math.min(1, elapsed / 2500);
       const interval = 400 - progress * 320;
 
@@ -198,14 +208,14 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
 
   // Determine which scene to display
   const displayScene = useMemo(() => {
-    if (phase === "from-white") return fromReady ? fromWhite : null;
+    if (phase === "show-from") return fromFullReady ? fromFull : null;
     if (phase === "flicker") {
-      if (flickerShow === "from") return fromReady ? fromWhite : null;
-      return toWhiteReady ? toWhite : (fromReady ? fromWhite : null);
+      if (flickerShow === "from") return fromWhiteReady ? fromWhite : (fromFullReady ? fromFull : null);
+      return toWhiteReady ? toWhite : (fromWhiteReady ? fromWhite : null);
     }
     // reveal / complete
     return toFullReady ? toFull : (toWhiteReady ? toWhite : null);
-  }, [phase, flickerShow, fromWhite, toWhite, toFull, fromReady, toWhiteReady, toFullReady]);
+  }, [phase, flickerShow, fromFull, fromWhite, toWhite, toFull, fromFullReady, fromWhiteReady, toWhiteReady, toFullReady]);
 
   const displayRef = useRef<typeof displayScene>(null);
   if (displayScene) displayRef.current = displayScene;
@@ -256,7 +266,7 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
     <box flexDirection="column" width="100%" height="100%" backgroundColor={t.bg.base}>
       {/* Text overlay */}
       <box height={3} justifyContent="center" alignItems="center">
-        {(phase === "from-white" || phase === "flicker") && (
+        {(phase === "show-from" || phase === "flicker") && (
           <text fg={t.accent.primary}>
             <strong>{displayName} is evolving{dotStr}</strong>
           </text>

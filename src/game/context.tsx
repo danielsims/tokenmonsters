@@ -128,7 +128,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
 
       if (result.evolved && result.newStage) {
-        const fromStage = freshMonster.stage;
+        // Use the stage *before* evolution — feedMonster returns the already-evolved
+        // monster, so we derive fromStage from the target: if we evolved TO hatchling,
+        // we came FROM egg, etc.
+        const stageOrder: Stage[] = ["egg", "hatchling", "prime", "apex"];
+        const toIdx = stageOrder.indexOf(result.newStage);
+        const fromStage = toIdx > 0 ? stageOrder[toIdx - 1] : freshMonster.stage;
         const idle = Date.now() - lastKeystrokeAt > IDLE_THRESHOLD;
         if (idle) {
           // User is AFK — loop alert and queue the evolution screen
@@ -180,7 +185,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
         nameMonster,
         switchMonster,
         setDaemonConnected,
-        setEvolving: setIsEvolving,
+        setEvolving: (v: boolean) => {
+          setIsEvolving(v);
+          if (!v) {
+            setEvolutionFromStage(null);
+            setEvolutionTarget(null);
+          }
+        },
         reportKeystroke,
       }}
     >

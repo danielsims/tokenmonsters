@@ -5,7 +5,9 @@
   },
   "bytepup": {
     "background": "96a2bb",
-    "targetHeight": 1.1
+    "targetHeight": 1.1,
+    "yOffset": 0.25,
+    "cameraHeight": 1.5
   },
   "bytesnap": {
     "background": "96a2bb",
@@ -26,8 +28,8 @@
   },
   "gigabyte": {
     "background": "a8c4ff",
-    "targetHeight": 2,
-    "yOffset": -0.2
+    "targetHeight": 1.8,
+    "yOffset": 0
   },
   "pinchy": {
     "background": "73331d",
@@ -43,8 +45,10 @@
     "targetHeight": 1.35
   },
   "molting-egg": {
-    "background": "2a3a5c",
-    "targetHeight": 0.75
+    "background": "FFFFFF",
+    "targetHeight": 0.75,
+    "yOffset": 0.1,
+    "cameraHeight": 1.5
   },
   "daemon": {
     "background": "cccccc",

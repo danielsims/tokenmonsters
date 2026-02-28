@@ -27,10 +27,10 @@ export default function Home() {
   const species = SPECIES[speciesIdx];
   const touchStart = useRef<number | null>(null);
 
-  const claimCommand = mintAddress ? `tokenmonsters claim ${mintAddress}` : "";
+  const installCommand = "npx tokenmonsters";
 
-  function copyClaimCommand() {
-    navigator.clipboard.writeText(claimCommand).then(() => {
+  function copyInstallCommand() {
+    navigator.clipboard.writeText(installCommand).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -248,11 +248,11 @@ export default function Home() {
               <p className="text-green-400 text-sm font-medium font-sans">
                 Egg minted successfully
               </p>
-              <p className="text-zinc-500 text-xs leading-relaxed font-sans">
-                To hatch this egg, install the game and run the claim command below.
+              <p className="text-zinc-500 text-sm leading-relaxed font-sans">
+                Run the game to claim your egg and start hatching.
               </p>
               <button
-                onClick={copyClaimCommand}
+                onClick={copyInstallCommand}
                 className="w-full bg-zinc-900/80 border border-zinc-700 rounded p-3 text-left hover:border-zinc-500 transition-colors group cursor-pointer"
               >
                 <div className="flex items-center justify-between mb-1.5">
@@ -261,10 +261,13 @@ export default function Home() {
                     {copied ? "copied" : "click to copy"}
                   </span>
                 </div>
-                <code className="text-amber-400 text-sm font-mono block break-all">
-                  tokenmonsters claim {mintAddress}
+                <code className="text-amber-400 text-sm font-mono block">
+                  {installCommand}
                 </code>
               </button>
+              <p className="text-zinc-600 text-xs leading-relaxed font-sans">
+                Your wallet will be linked automatically. Press <span className="text-zinc-400">p</span> in-game to claim.
+              </p>
               <div className="flex items-center justify-between text-xs font-sans">
                 <a
                   href={`https://explorer.solana.com/address/${mintAddress}?cluster=devnet`}

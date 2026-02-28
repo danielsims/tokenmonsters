@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { execSync } from "child_process";
 import { useKeyboard } from "@opentui/react";
 import { useMonster } from "../hooks/useMonster";
@@ -7,7 +7,7 @@ import { linkWallet } from "../../chain/link";
 import { fetchWalletTmonNfts, type WalletNft } from "../../chain/verify";
 import { claimEgg } from "../../chain/claim";
 import { RegistryPreview } from "../components/RegistryPreview";
-import { t } from "../theme";
+import { t, setTheme } from "../theme";
 
 const WELCOME_ART = [
   "  _____ ___  _  _____ _  _   __  __  ___  _  _ ___ _____ ___ ___  ___",
@@ -23,7 +23,7 @@ const MINTABLE_EGGS = [
   { speciesId: 7, priceLamports: 1_000_000_000 },
 ];
 
-type Phase = "browse" | "naming" | "minting" | "linking" | "scanning" | "pick" | "claiming" | "error";
+type Phase = "browse" | "minting" | "linking" | "scanning" | "pick" | "claiming" | "error";
 
 const WEBSITE_URL = process.env.TOKENMON_WEBSITE_URL || "https://tokenmonsters.sh";
 
@@ -54,11 +54,16 @@ function openUrl(url: string): void {
 }
 
 export function OnboardingScreen({ onComplete }: { onComplete: (name: string) => void }) {
-  const { generateSpecificEgg, nameMonster, refresh } = useMonster();
+  const { generateSpecificEgg, refresh } = useMonster();
   const [phase, setPhase] = useState<Phase>("browse");
   const [eggIndex, setEggIndex] = useState(0);
-  const [name, setName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Force catppuccin theme for onboarding
+  useEffect(() => {
+    setTheme("catppuccin");
+    setSetting("theme", "catppuccin");
+  }, []);
   const [claimableNfts, setClaimableNfts] = useState<WalletNft[]>([]);
   const [pickIndex, setPickIndex] = useState(0);
 
@@ -90,7 +95,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
             return;
           }
           refresh();
-          setPhase("naming");
+          onComplete("");
           return;
         }
         setClaimableNfts(unclaimed);
@@ -130,7 +135,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
           return;
         }
         refresh();
-        setPhase("naming");
+        onComplete("");
         return;
       }
       setClaimableNfts(unclaimed);
@@ -159,7 +164,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
           return;
         }
         refresh();
-        setPhase("naming");
+        onComplete("");
       } catch {
         setErrorMessage("Network error during claim.");
         setPhase("error");
@@ -177,20 +182,11 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
       } else if (key.name === "return") {
         if (egg.priceLamports === 0) {
           generateSpecificEgg(egg.speciesId);
-          setPhase("naming");
+          onComplete("");
         } else {
           openUrl(WEBSITE_URL);
           setPhase("minting");
         }
-      }
-    } else if (phase === "naming") {
-      if (key.name === "return" && name.length > 0) {
-        nameMonster(name);
-        onComplete(name);
-      } else if (key.name === "backspace" || key.name === "delete") {
-        setName((n) => n.slice(0, -1));
-      } else if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta) {
-        setName((n) => n + key.sequence);
       }
     } else if (phase === "minting") {
       if (key.name === "return") {
@@ -263,31 +259,6 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
             </text>
             <box height={1} />
             <text fg={t.text.dim}>{"<- -> browse   ENTER select"}</text>
-          </>
-        )}
-
-        {phase === "naming" && (
-          <>
-            <text fg={t.accent.green}>A mysterious egg appears before you...</text>
-            <box height={1} />
-            <text fg={t.text.primary}>
-              <strong>Name your creature:</strong>
-            </text>
-            <box height={1} />
-            <box
-              border
-              borderStyle="rounded"
-              borderColor={t.border.muted}
-              paddingX={2}
-              width={40}
-            >
-              <text fg={name.length > 0 ? t.text.primary : t.text.dim}>
-                {name.length > 0 ? name : "Type a name..."}
-                <span fg={t.accent.primary}>_</span>
-              </text>
-            </box>
-            <box height={1} />
-            <text fg={t.text.dim}>Press ENTER to confirm</text>
           </>
         )}
 
