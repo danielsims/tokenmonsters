@@ -139,6 +139,13 @@ export default function Home() {
   async function handleMint() {
     if (!connected || !wallet?.adapter) return;
 
+    // If already in progress (user closed wallet and retried), reset first
+    if (mintState === "minting" || mintState === "confirming") {
+      setMintState("idle");
+      setError(null);
+      return;
+    }
+
     setMintState("minting");
     setError(null);
 
@@ -289,11 +296,7 @@ export default function Home() {
             <div className="space-y-3">
               <button
                 onClick={handleMint}
-                disabled={
-                  mintState === "minting" ||
-                  mintState === "confirming" ||
-                  (!canAfford && species.priceLamports > 0)
-                }
+                disabled={!canAfford && species.priceLamports > 0}
                 className="w-full py-2.5 bg-zinc-800 border border-zinc-600 text-zinc-200 rounded hover:bg-zinc-700 hover:border-zinc-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-mono"
               >
                 {mintState === "minting"
