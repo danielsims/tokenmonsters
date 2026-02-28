@@ -16,7 +16,16 @@ export default function Home() {
   const { connected, publicKey, wallet, connect } = useWallet();
   const { connection } = useConnection();
   const { setVisible: openWalletModal } = useWalletModal();
-  const [speciesIdx, setSpeciesIdx] = useState(0);
+  const [speciesIdx, setSpeciesIdx] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const params = new URLSearchParams(window.location.search);
+    const id = Number(params.get("species"));
+    if (id) {
+      const idx = SPECIES.findIndex((s) => s.id === id);
+      if (idx >= 0) return idx;
+    }
+    return 0;
+  });
   const [mintState, setMintState] = useState<MintState>("idle");
   const [mintAddress, setMintAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -2,11 +2,19 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { execSync } from "child_process";
 import { useKeyboard } from "@opentui/react";
 import { useMonster } from "../hooks/useMonster";
-import { getSpeciesById, getSetting, setSetting, isAlreadyClaimed } from "../../db/queries";
+import {
+  getSpeciesById,
+  getSetting,
+  setSetting,
+  isAlreadyClaimed,
+  resolveSpeciesByEggName,
+} from "../../db/queries";
 import { linkWallet } from "../../chain/link";
 import { fetchWalletTmonNfts, type WalletNft } from "../../chain/verify";
 import { claimEgg } from "../../chain/claim";
+import { generateQrString } from "../../chain/wallet";
 import { RegistryPreview } from "../components/RegistryPreview";
+import type { Species } from "../../models/types";
 import { t, setTheme } from "../theme";
 
 const WELCOME_ART = [
@@ -25,7 +33,7 @@ const MINTABLE_EGGS = [
 
 type Phase = "browse" | "minting" | "linking" | "scanning" | "pick" | "claiming" | "error";
 
-const WEBSITE_URL = process.env.TOKENMON_WEBSITE_URL || "https://tokenmonsters.sh";
+const WEBSITE_URL = process.env.TOKENMON_WEBSITE_URL || "https://tokenmonsters.vercel.app";
 
 function formatPrice(lamports: number): string {
   if (lamports === 0) return "FREE";
@@ -53,8 +61,14 @@ function openUrl(url: string): void {
   } catch {}
 }
 
+/** Extract egg name from NFT name (e.g. "Molting Egg #a3f8" → "Molting Egg") */
+function extractEggName(nftName: string): string {
+  const hashIdx = nftName.lastIndexOf("#");
+  return hashIdx > 0 ? nftName.slice(0, hashIdx).trim() : nftName;
+}
+
 export function OnboardingScreen({ onComplete }: { onComplete: (name: string) => void }) {
-  const { generateSpecificEgg, refresh } = useMonster();
+  const { refresh } = useMonster();
   const [phase, setPhase] = useState<Phase>("browse");
   const [eggIndex, setEggIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
@@ -66,6 +80,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
   }, []);
   const [claimableNfts, setClaimableNfts] = useState<WalletNft[]>([]);
   const [pickIndex, setPickIndex] = useState(0);
+  const [qrCode, setQrCode] = useState<string | null>(null);
 
   const egg = MINTABLE_EGGS[eggIndex];
   const species = useMemo(() => getSpeciesById(egg.speciesId), [egg.speciesId]);
@@ -73,6 +88,24 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
   const speciesName = species?.forms[0]?.name ?? "Unknown";
   const rarity = species?.rarity ?? "common";
   const description = species?.description ?? "";
+
+  // Resolve species for the currently selected NFT in pick phase
+  const selectedNft = phase === "pick" ? claimableNfts[pickIndex] ?? null : null;
+  const selectedNftSpecies = useMemo<Species | null>(() => {
+    if (!selectedNft) return null;
+    const eggName = extractEggName(selectedNft.name);
+    return resolveSpeciesByEggName(eggName);
+  }, [selectedNft?.mintAddress]);
+
+  // Generate QR code for selected NFT
+  useEffect(() => {
+    if (!selectedNft) {
+      setQrCode(null);
+      return;
+    }
+    const url = `https://explorer.solana.com/address/${selectedNft.mintAddress}?cluster=devnet`;
+    generateQrString(url).then(setQrCode);
+  }, [selectedNft?.mintAddress]);
 
   const handleLinkAndScan = useCallback(async () => {
     const saved = getSetting("claim_wallet");
@@ -82,7 +115,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
         const nfts = await fetchWalletTmonNfts(saved);
         const unclaimed = nfts.filter((n) => !isAlreadyClaimed(n.mintAddress));
         if (unclaimed.length === 0) {
-          setErrorMessage("No unclaimed eggs found. Mint at tokenmonsters.sh first.");
+          setErrorMessage("No unclaimed eggs found. Mint at tokenmonsters.vercel.app first.");
           setPhase("error");
           return;
         }
@@ -122,7 +155,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
       const nfts = await fetchWalletTmonNfts(result.address);
       const unclaimed = nfts.filter((n) => !isAlreadyClaimed(n.mintAddress));
       if (unclaimed.length === 0) {
-        setErrorMessage("No unclaimed eggs found. Mint at tokenmonsters.sh first.");
+        setErrorMessage("No unclaimed eggs found. Mint at tokenmonsters.vercel.app first.");
         setPhase("error");
         return;
       }
@@ -180,13 +213,10 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
       } else if (key.name === "right") {
         setEggIndex((i) => (i + 1) % MINTABLE_EGGS.length);
       } else if (key.name === "return") {
-        if (egg.priceLamports === 0) {
-          generateSpecificEgg(egg.speciesId);
-          onComplete("");
-        } else {
-          openUrl(WEBSITE_URL);
-          setPhase("minting");
-        }
+        openUrl(`${WEBSITE_URL}?species=${egg.speciesId}`);
+        setPhase("minting");
+      } else if (key.sequence === "c" || key.sequence === "C") {
+        handleLinkAndScan();
       }
     } else if (phase === "minting") {
       if (key.name === "return") {
@@ -195,9 +225,9 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
         setPhase("browse");
       }
     } else if (phase === "pick") {
-      if (key.name === "up") {
+      if (key.name === "up" || key.name === "left") {
         setPickIndex((i) => Math.max(0, i - 1));
-      } else if (key.name === "down") {
+      } else if (key.name === "down" || key.name === "right") {
         setPickIndex((i) => Math.min(claimableNfts.length - 1, i + 1));
       } else if (key.name === "return" && claimableNfts[pickIndex]) {
         handleClaimNft(claimableNfts[pickIndex].mintAddress);
@@ -211,6 +241,98 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
     }
   });
 
+  // Pick phase uses a different layout — 3D preview + egg list side by side
+  if (phase === "pick") {
+    // Arrange NFTs in columns (max 5 per column)
+    const COL_SIZE = 5;
+    const columns: WalletNft[][] = [];
+    for (let i = 0; i < claimableNfts.length; i += COL_SIZE) {
+      columns.push(claimableNfts.slice(i, i + COL_SIZE));
+    }
+
+    return (
+      <box
+        flexDirection="column"
+        width="100%"
+        height="100%"
+        backgroundColor={t.bg.base}
+      >
+        {/* Header */}
+        <box paddingY={1} alignItems="center" justifyContent="center">
+          <text fg={t.accent.warm}>{WELCOME_ART}</text>
+        </box>
+
+        {/* Main area: 3D preview with QR overlay */}
+        <box flexGrow={1} width="100%">
+          <RegistryPreview
+            key={selectedNft?.mintAddress ?? "none"}
+            species={selectedNftSpecies}
+            formIndex={0}
+          />
+          {/* QR code overlay — top right */}
+          {qrCode && (
+            <box
+              position="absolute"
+              top={0}
+              right={1}
+            >
+              <text fg={t.text.primary} backgroundColor={t.bg.base}>
+                {qrCode}
+              </text>
+            </box>
+          )}
+        </box>
+
+        {/* Pick panel */}
+        <box
+          flexDirection="column"
+          width="100%"
+          paddingX={2}
+          paddingY={1}
+          height={10}
+        >
+          <box flexDirection="row" justifyContent="space-between" width="100%">
+            <text fg={t.text.primary}>
+              <strong>Claim an egg</strong>
+              <span fg={t.text.dim}>  {claimableNfts.length} unclaimed</span>
+            </text>
+            {selectedNft && (
+              <text fg={t.text.dim}>
+                {selectedNft.mintAddress.slice(0, 4)}...{selectedNft.mintAddress.slice(-4)}
+              </text>
+            )}
+          </box>
+          <box height={1} />
+          {/* Multi-column egg list */}
+          <box flexDirection="row" width="100%">
+            {columns.map((col, ci) => (
+              <box key={ci} flexDirection="column" width={30}>
+                {col.map((nft, ri) => {
+                  const globalIdx = ci * COL_SIZE + ri;
+                  const isSel = globalIdx === pickIndex;
+                  const eggName = extractEggName(nft.name);
+                  const sp = resolveSpeciesByEggName(eggName);
+                  return (
+                    <box key={nft.mintAddress} height={1}>
+                      <text fg={isSel ? t.accent.primary : t.text.muted}>
+                        {isSel ? "> " : "  "}
+                        {nft.name}
+                        {sp && <span fg={getRarityColor(sp.rarity)}> {sp.rarity}</span>}
+                      </text>
+                    </box>
+                  );
+                })}
+              </box>
+            ))}
+          </box>
+          <box height={1} />
+          <text fg={t.text.dim}>ENTER  claim   ESC  back</text>
+        </box>
+      </box>
+    );
+  }
+
+  // Default layout for all other phases
   return (
     <box
       flexDirection="column"
@@ -236,36 +358,30 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
         width="100%"
         paddingX={4}
         paddingY={1}
-        height={10}
+        height={9}
       >
         {phase === "browse" && (
           <>
             <box flexDirection="row" justifyContent="center" width="100%">
               <text fg={t.text.dim}>{"<  "}</text>
-              <text>
-                <strong fg={t.text.primary}>{speciesName}</strong>
-              </text>
+              <text><strong fg={t.text.primary}>{speciesName}</strong></text>
               <text fg={getRarityColor(rarity)}>{"  " + rarity}</text>
               <text fg={t.text.dim}>{"  >"}</text>
             </box>
+            <text fg={t.text.muted}>{formatPrice(egg.priceLamports)}</text>
+            <box height={1} />
             <text fg={t.text.muted}>{description}</text>
-            <box height={1} />
-            <text fg={t.text.primary}>
-              <strong>
-                {egg.priceLamports === 0
-                  ? "ENTER  Get Egg — FREE"
-                  : `ENTER  Mint — ${formatPrice(egg.priceLamports)}`}
-              </strong>
+            <box flexGrow={1} />
+            <text fg={t.text.dim}>
+              {"ENTER mint    C claim minted egg    <- -> browse"}
             </text>
-            <box height={1} />
-            <text fg={t.text.dim}>{"<- -> browse   ENTER select"}</text>
           </>
         )}
 
         {phase === "minting" && (
           <>
             <text fg={t.text.primary}>
-              Mint your egg at <strong>tokenmonsters.sh</strong>
+              Mint your egg at <strong>tokenmonsters.vercel.app</strong>
             </text>
             <box height={1} />
             <text fg={t.text.muted}>A browser window has opened.</text>
@@ -285,26 +401,6 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
 
         {phase === "scanning" && (
           <text fg={t.text.primary}>Scanning blockchain for your eggs...</text>
-        )}
-
-        {phase === "pick" && (
-          <>
-            <text fg={t.text.primary}>
-              Found {claimableNfts.length} unclaimed egg
-              {claimableNfts.length !== 1 ? "s" : ""}
-            </text>
-            <box height={1} />
-            {claimableNfts.map((nft, i) => (
-              <box key={nft.mintAddress} height={1}>
-                <text fg={i === pickIndex ? t.accent.primary : t.text.muted}>
-                  {i === pickIndex ? "> " : "  "}
-                  {nft.name}
-                </text>
-              </box>
-            ))}
-            <box height={1} />
-            <text fg={t.text.dim}>ENTER  claim   ESC  back</text>
-          </>
         )}
 
         {phase === "claiming" && <text fg={t.text.primary}>Claiming egg...</text>}
