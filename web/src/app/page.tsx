@@ -258,7 +258,7 @@ export default function Home() {
                 className="w-full bg-zinc-900/80 border border-zinc-700 rounded p-3 hover:border-zinc-500 transition-colors group cursor-pointer"
               >
                 <div className="flex items-center justify-between">
-                  <code className="text-amber-400 text-sm font-mono">{installCommand}</code>
+                  <code className="text-zinc-200 text-sm font-mono">{installCommand}</code>
                   <span className="text-zinc-600 text-xs group-hover:text-zinc-400 transition-colors font-sans">
                     {copied ? "copied" : "copy"}
                   </span>
