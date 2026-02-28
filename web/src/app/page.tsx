@@ -244,30 +244,26 @@ export default function Home() {
               ⏎ Mint — {formatPrice(species.priceLamports)}
             </button>
           ) : mintState === "success" && mintAddress ? (
-            <div className="space-y-3">
-              <p className="text-green-400 text-sm font-medium font-sans">
-                Egg minted successfully
-              </p>
-              <p className="text-zinc-500 text-sm leading-relaxed font-sans">
-                Run the game to claim your egg and start hatching.
-              </p>
+            <div className="space-y-4">
+              <div className="text-center space-y-1">
+                <p className="text-green-400 text-base font-medium font-sans">
+                  Egg minted
+                </p>
+                <p className="text-zinc-500 text-sm font-sans">
+                  Claim it in-game to start hatching.
+                </p>
+              </div>
               <button
                 onClick={copyInstallCommand}
-                className="w-full bg-zinc-900/80 border border-zinc-700 rounded p-3 text-left hover:border-zinc-500 transition-colors group cursor-pointer"
+                className="w-full bg-zinc-900/80 border border-zinc-700 rounded p-3 hover:border-zinc-500 transition-colors group cursor-pointer"
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-zinc-600 text-xs font-mono">$</span>
+                <div className="flex items-center justify-between">
+                  <code className="text-amber-400 text-sm font-mono">{installCommand}</code>
                   <span className="text-zinc-600 text-xs group-hover:text-zinc-400 transition-colors font-sans">
-                    {copied ? "copied" : "click to copy"}
+                    {copied ? "copied" : "copy"}
                   </span>
                 </div>
-                <code className="text-amber-400 text-sm font-mono block">
-                  {installCommand}
-                </code>
               </button>
-              <p className="text-zinc-600 text-xs leading-relaxed font-sans">
-                Your wallet will be linked automatically. Press <span className="text-zinc-400">p</span> in-game to claim.
-              </p>
               <div className="flex items-center justify-between text-xs font-sans">
                 <a
                   href={`https://explorer.solana.com/address/${mintAddress}?cluster=devnet`}
