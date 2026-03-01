@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { useRef, useMemo, useCallback, useState, useEffect } from "react";
-import { loadGlbTestScene, updateSceneBackground } from "../../three/glb-loader";
+import { loadGlbTestScene, updateSceneBackground, disposeScene } from "../../three/glb-loader";
 import { resolve } from "path";
 import { existsSync } from "fs";
 import type { Species } from "../../models/types";
@@ -143,7 +143,10 @@ export function RegistryPreview({ species, formIndex, locked = false }: Registry
       readySceneRef.current = glbScene;
       setGlbReady(true);
     }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      disposeScene(glbScene.scene);
+    };
   }, [glbScene]);
 
   // Only returns a scene when its GLB is fully loaded

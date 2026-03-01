@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useGame } from "../../game/context";
 import { getCurrentForm } from "../../models/evolution";
-import { loadGlbTestScene } from "../../three/glb-loader";
+import { loadGlbTestScene, disposeScene } from "../../three/glb-loader";
 import { playSound } from "../../audio/player";
 import { resolve } from "path";
 import { existsSync } from "fs";
@@ -135,28 +135,28 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
     if (!fromFull) return;
     let cancelled = false;
     fromFull.ready.then(() => { if (!cancelled) setFromFullReady(true); }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => { cancelled = true; disposeScene(fromFull.scene); };
   }, [fromFull]);
 
   useEffect(() => {
     if (!fromWhite) return;
     let cancelled = false;
     fromWhite.ready.then(() => { if (!cancelled) setFromWhiteReady(true); }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => { cancelled = true; disposeScene(fromWhite.scene); };
   }, [fromWhite]);
 
   useEffect(() => {
     if (!toWhite) return;
     let cancelled = false;
     toWhite.ready.then(() => { if (!cancelled) setToWhiteReady(true); }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => { cancelled = true; disposeScene(toWhite.scene); };
   }, [toWhite]);
 
   useEffect(() => {
     if (!toFull) return;
     let cancelled = false;
     toFull.ready.then(() => { if (!cancelled) setToFullReady(true); }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => { cancelled = true; disposeScene(toFull.scene); };
   }, [toFull]);
 
   // Animation state machine — starts once textured from scene is ready

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useGame } from "../../game/context";
 import { getCurrentForm } from "../../models/evolution";
-import { loadGlbTestScene } from "../../three/glb-loader";
+import { loadGlbTestScene, disposeScene } from "../../three/glb-loader";
 import { playSound } from "../../audio/player";
 import { resolve } from "path";
 import { existsSync } from "fs";
@@ -134,28 +134,28 @@ export function HatchScreen({ onComplete }: { onComplete: () => void }) {
     if (!eggFull) return;
     let cancelled = false;
     eggFull.ready.then(() => { if (!cancelled) setEggFullReady(true); }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => { cancelled = true; disposeScene(eggFull.scene); };
   }, [eggFull]);
 
   useEffect(() => {
     if (!eggWhite) return;
     let cancelled = false;
     eggWhite.ready.then(() => { if (!cancelled) setEggWhiteReady(true); }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => { cancelled = true; disposeScene(eggWhite.scene); };
   }, [eggWhite]);
 
   useEffect(() => {
     if (!hatchWhite) return;
     let cancelled = false;
     hatchWhite.ready.then(() => { if (!cancelled) setHatchWhiteReady(true); }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => { cancelled = true; disposeScene(hatchWhite.scene); };
   }, [hatchWhite]);
 
   useEffect(() => {
     if (!hatchFull) return;
     let cancelled = false;
     hatchFull.ready.then(() => { if (!cancelled) setHatchFullReady(true); }).catch(() => {});
-    return () => { cancelled = true; };
+    return () => { cancelled = true; disposeScene(hatchFull.scene); };
   }, [hatchFull]);
 
   // Animation state machine — starts once textured egg is ready

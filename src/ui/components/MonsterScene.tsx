@@ -1,7 +1,7 @@
 import { useRef, useMemo, useCallback, useState, useEffect } from "react";
 import { useKeyboard } from "@opentui/react";
 import { useGame } from "../../game/context";
-import { loadGlbTestScene, updateSceneBackground } from "../../three/glb-loader";
+import { loadGlbTestScene, updateSceneBackground, disposeScene } from "../../three/glb-loader";
 import { resolve } from "path";
 import { existsSync } from "fs";
 import type { Species, Stage } from "../../models/types";
@@ -95,7 +95,10 @@ export function MonsterScene() {
     }).catch(() => {
       if (!cancelled) setGlbReady(false);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      disposeScene(glbScene.scene);
+    };
   }, [glbScene]);
 
   const sceneData = useMemo(() => {

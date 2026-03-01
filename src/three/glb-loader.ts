@@ -227,8 +227,31 @@ export interface GLBSceneResult {
   ready: Promise<void>;
 }
 
+/** Dispose all geometries, materials, and textures in a scene */
+export function disposeScene(scene: THREE.Scene): void {
+  if (scene.background instanceof THREE.Texture) {
+    scene.background.dispose();
+  }
+  scene.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.geometry?.dispose();
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of materials) {
+        if (mat.map) mat.map.dispose();
+        if ((mat as any).normalMap) (mat as any).normalMap.dispose();
+        if ((mat as any).emissiveMap) (mat as any).emissiveMap.dispose();
+        mat.dispose();
+      }
+    }
+  });
+}
+
 /** Update a scene's gradient background without rebuilding the scene */
 export function updateSceneBackground(scene: THREE.Scene, background: number): void {
+  // Dispose old background texture
+  if (scene.background instanceof THREE.Texture) {
+    scene.background.dispose();
+  }
   const bgBase = new THREE.Color(background);
   const hsl = { h: 0, s: 0, l: 0 };
   bgBase.getHSL(hsl);
