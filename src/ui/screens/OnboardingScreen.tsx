@@ -12,7 +12,6 @@ import {
 import { linkWallet } from "../../chain/link";
 import { fetchWalletTmonNfts, type WalletNft } from "../../chain/verify";
 import { claimEgg } from "../../chain/claim";
-import { generateQrString } from "../../chain/wallet";
 import { RegistryPreview } from "../components/RegistryPreview";
 import type { Species } from "../../models/types";
 import { t, setTheme } from "../theme";
@@ -24,16 +23,32 @@ const WELCOME_ART = [
   "   |_| \\___/|_|\\_\\___|_|\\_| |_|  |_|\\___/|_|\\_|___/ |_| |___|_|_\\|___/",
 ].join("\n");
 
-const MINTABLE_EGGS = [
-  { speciesId: 1, priceLamports: 0 },
-  { speciesId: 2, priceLamports: 0 },
-  { speciesId: 6, priceLamports: 1_000_000_000 },
-  { speciesId: 7, priceLamports: 1_000_000_000 },
+const MINTABLE_SPECIES = [1, 2, 6, 7];
+
+interface RarityTier {
+  name: string;
+  color: string;
+  priceLamports: number;
+  supply: number | null; // null = unlimited
+}
+
+const RARITY_TIERS: RarityTier[] = [
+  { name: "common", color: "#a1a1aa", priceLamports: 200_000_000, supply: null },
+  { name: "rare", color: "#c084fc", priceLamports: 1_000_000_000, supply: 1000 },
+  { name: "legendary", color: "#4ade80", priceLamports: 5_000_000_000, supply: 500 },
+  { name: "founder", color: "#60a5fa", priceLamports: 20_000_000_000, supply: 100 },
 ];
 
 type Phase = "browse" | "minting" | "linking" | "scanning" | "pick" | "claiming" | "error";
 
-const WEBSITE_URL = process.env.TOKENMON_WEBSITE_URL || "https://tokenmonsters.vercel.app";
+const WEBSITE_URL = process.env.TOKENMONSTERS_WEBSITE_URL || "https://tokenmonsters.vercel.app";
+
+const PINCHY_SPECIES_ID = 1;
+
+function getPrice(tier: RarityTier, speciesId: number): number {
+  if (tier.name === "common" && speciesId === PINCHY_SPECIES_ID) return 0;
+  return tier.priceLamports;
+}
 
 function formatPrice(lamports: number): string {
   if (lamports === 0) return "FREE";
@@ -67,26 +82,32 @@ function extractEggName(nftName: string): string {
   return hashIdx > 0 ? nftName.slice(0, hashIdx).trim() : nftName;
 }
 
-export function OnboardingScreen({ onComplete }: { onComplete: (name: string) => void }) {
+interface OnboardingProps {
+  onComplete: (name: string) => void;
+  mode?: "onboarding" | "mint";
+}
+
+export function OnboardingScreen({ onComplete, mode = "onboarding" }: OnboardingProps) {
   const { refresh } = useMonster();
   const [phase, setPhase] = useState<Phase>("browse");
   const [eggIndex, setEggIndex] = useState(0);
+  const [tierIndex, setTierIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Force catppuccin theme for onboarding
+  // Force catppuccin theme for onboarding (shop uses current theme)
   useEffect(() => {
-    setTheme("catppuccin");
-    setSetting("theme", "catppuccin");
-  }, []);
+    if (mode === "onboarding") {
+      setTheme("catppuccin");
+      setSetting("theme", "catppuccin");
+    }
+  }, [mode]);
   const [claimableNfts, setClaimableNfts] = useState<WalletNft[]>([]);
   const [pickIndex, setPickIndex] = useState(0);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-
-  const egg = MINTABLE_EGGS[eggIndex];
-  const species = useMemo(() => getSpeciesById(egg.speciesId), [egg.speciesId]);
+  const speciesId = MINTABLE_SPECIES[eggIndex];
+  const tier = RARITY_TIERS[tierIndex];
+  const species = useMemo(() => getSpeciesById(speciesId), [speciesId]);
 
   const speciesName = species?.forms[0]?.name ?? "Unknown";
-  const rarity = species?.rarity ?? "common";
   const description = species?.description ?? "";
 
   // Resolve species for the currently selected NFT in pick phase
@@ -95,16 +116,6 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
     if (!selectedNft) return null;
     const eggName = extractEggName(selectedNft.name);
     return resolveSpeciesByEggName(eggName);
-  }, [selectedNft?.mintAddress]);
-
-  // Generate QR code for selected NFT
-  useEffect(() => {
-    if (!selectedNft) {
-      setQrCode(null);
-      return;
-    }
-    const url = `https://explorer.solana.com/address/${selectedNft.mintAddress}?cluster=devnet`;
-    generateQrString(url).then(setQrCode);
   }, [selectedNft?.mintAddress]);
 
   const handleLinkAndScan = useCallback(async () => {
@@ -208,12 +219,20 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
 
   useKeyboard((key) => {
     if (phase === "browse") {
+      if (key.name === "escape" && mode === "mint") {
+        onComplete("");
+        return;
+      }
       if (key.name === "left") {
-        setEggIndex((i) => (i - 1 + MINTABLE_EGGS.length) % MINTABLE_EGGS.length);
+        setEggIndex((i) => (i - 1 + MINTABLE_SPECIES.length) % MINTABLE_SPECIES.length);
       } else if (key.name === "right") {
-        setEggIndex((i) => (i + 1) % MINTABLE_EGGS.length);
+        setEggIndex((i) => (i + 1) % MINTABLE_SPECIES.length);
+      } else if (key.name === "up") {
+        setTierIndex((i) => Math.min(RARITY_TIERS.length - 1, i + 1));
+      } else if (key.name === "down") {
+        setTierIndex((i) => Math.max(0, i - 1));
       } else if (key.name === "return") {
-        openUrl(`${WEBSITE_URL}?species=${egg.speciesId}`);
+        openUrl(`${WEBSITE_URL}?species=${speciesId}&rarity=${tier.name}`);
         setPhase("minting");
       } else if (key.sequence === "c" || key.sequence === "C") {
         handleLinkAndScan();
@@ -231,6 +250,9 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
         setPickIndex((i) => Math.min(claimableNfts.length - 1, i + 1));
       } else if (key.name === "return" && claimableNfts[pickIndex]) {
         handleClaimNft(claimableNfts[pickIndex].mintAddress);
+      } else if ((key.sequence === "e" || key.sequence === "E") && claimableNfts[pickIndex]) {
+        const url = `https://explorer.solana.com/address/${claimableNfts[pickIndex].mintAddress}?cluster=devnet`;
+        openUrl(url);
       } else if (key.name === "escape") {
         setPhase("browse");
       }
@@ -262,25 +284,13 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
           <text fg={t.accent.warm}>{WELCOME_ART}</text>
         </box>
 
-        {/* Main area: 3D preview with QR overlay */}
+        {/* Main area: 3D preview */}
         <box flexGrow={1} width="100%">
           <RegistryPreview
             key={selectedNft?.mintAddress ?? "none"}
             species={selectedNftSpecies}
             formIndex={0}
           />
-          {/* QR code overlay — top right */}
-          {qrCode && (
-            <box
-              position="absolute"
-              top={0}
-              right={1}
-            >
-              <text fg={t.text.primary} backgroundColor={t.bg.base}>
-                {qrCode}
-              </text>
-            </box>
-          )}
         </box>
 
         {/* Pick panel */}
@@ -326,7 +336,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
             ))}
           </box>
           <box height={1} />
-          <text fg={t.text.dim}>ENTER  claim   ESC  back</text>
+          <text fg={t.text.dim}>ENTER  claim   E  explorer   ESC  back</text>
         </box>
       </box>
     );
@@ -348,7 +358,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
 
       {/* 3D Egg Preview */}
       <box flexGrow={1} width="100%">
-        <RegistryPreview key={egg.speciesId} species={species} formIndex={0} />
+        <RegistryPreview key={speciesId} species={species} formIndex={0} />
       </box>
 
       {/* Info Panel */}
@@ -365,15 +375,25 @@ export function OnboardingScreen({ onComplete }: { onComplete: (name: string) =>
             <box flexDirection="row" justifyContent="center" width="100%">
               <text fg={t.text.dim}>{"<  "}</text>
               <text><strong fg={t.text.primary}>{speciesName}</strong></text>
-              <text fg={getRarityColor(rarity)}>{"  " + rarity}</text>
               <text fg={t.text.dim}>{"  >"}</text>
             </box>
-            <text fg={t.text.muted}>{formatPrice(egg.priceLamports)}</text>
+            <box flexDirection="row" justifyContent="center" width="100%">
+              <text fg={tier.color}>
+                {tierIndex < RARITY_TIERS.length - 1 ? "^  " : "   "}
+                {tier.name}
+                {"  "}
+                {formatPrice(getPrice(tier, speciesId))}
+                {tier.supply ? `  (${tier.supply} per species)` : ""}
+                {tierIndex > 0 ? "  v" : ""}
+              </text>
+            </box>
             <box height={1} />
             <text fg={t.text.muted}>{description}</text>
             <box flexGrow={1} />
             <text fg={t.text.dim}>
-              {"ENTER mint    C claim minted egg    <- -> browse"}
+              {mode === "mint"
+                ? "ENTER mint    C claim    <- -> species    ^ v rarity    ESC back"
+                : "ENTER mint    C claim    <- -> species    ^ v rarity"}
             </text>
           </>
         )}
