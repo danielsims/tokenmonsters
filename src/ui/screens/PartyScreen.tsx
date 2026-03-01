@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { execSync } from "child_process";
 import { useKeyboard } from "@opentui/react";
-import { getAllMonsters, getSpeciesById, isAlreadyClaimed, getSetting, setSetting } from "../../db/queries";
+import { getAllMonsters, getSpeciesById, isAlreadyClaimed, getSetting, setSetting, resolveSpeciesByEggName } from "../../db/queries";
 import { useGame } from "../../game/context";
 import { getCurrentForm } from "../../models/evolution";
 import { getLevel } from "../../models/level";
@@ -12,10 +12,37 @@ import { claimEgg } from "../../chain/claim";
 import { linkWallet } from "../../chain/link";
 import { fetchWalletTmonNfts, type WalletNft } from "../../chain/verify";
 import type { Monster, Species, Stage } from "../../models/types";
-import { generateQrString } from "../../chain/wallet";
 import { t } from "../theme";
 
+function openUrl(url: string): void {
+  try {
+    if (process.platform === "darwin") {
+      execSync(`open "${url}"`);
+    } else if (process.platform === "linux") {
+      execSync(`xdg-open "${url}"`);
+    } else {
+      execSync(`start "" "${url}"`);
+    }
+  } catch {}
+}
+
 const LIST_WIDTH = 34;
+const PICK_COL_SIZE = 5;
+
+/** Extract egg name from NFT name (e.g. "Molting Egg #a3f8" → "Molting Egg") */
+function extractEggName(nftName: string): string {
+  const hashIdx = nftName.lastIndexOf("#");
+  return hashIdx > 0 ? nftName.slice(0, hashIdx).trim() : nftName;
+}
+
+function getRarityColor(rarity: string): string {
+  switch (rarity) {
+    case "common": return "#a1a1aa";
+    case "uncommon": return "#4ade80";
+    case "rare": return "#c084fc";
+    default: return "#a1a1aa";
+  }
+}
 
 const STAGE_LABELS: Record<Stage, string> = {
   egg: "Egg",
@@ -49,7 +76,6 @@ export function PartyScreen({ onSwitch }: { onSwitch?: () => void }) {
   const [claimResult, setClaimResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [qrCode, setQrCode] = useState<string | null>(null);
 
   const entries = useMemo(() => {
     const monsters = getAllMonsters();
@@ -75,16 +101,17 @@ export function PartyScreen({ onSwitch }: { onSwitch?: () => void }) {
   const isClaimSelected = selectedIndex === claimRowIndex;
   const selected = isClaimSelected ? null : (entries[selectedIndex] ?? null);
 
-  // Generate QR code for minted monsters (links to Solana Explorer)
-  useEffect(() => {
-    if (!selected?.monster.mintAddress) {
-      setQrCode(null);
-      return;
-    }
-    const cluster = selected.monster.mintNetwork === "mainnet-beta" ? "" : "?cluster=devnet";
-    const url = `https://explorer.solana.com/address/${selected.monster.mintAddress}${cluster}`;
-    generateQrString(url).then(setQrCode);
-  }, [selected?.monster.mintAddress, selected?.monster.mintNetwork]);
+  // Resolve species for the currently selected NFT in pick mode
+  const unclaimedNfts = useMemo(
+    () => claimableNfts.filter((c) => !c.alreadyClaimed),
+    [claimableNfts],
+  );
+  const selectedNft = mode === "pick" ? unclaimedNfts[pickIndex]?.nft ?? null : null;
+  const selectedNftSpecies = useMemo<Species | null>(() => {
+    if (!selectedNft) return null;
+    const eggName = extractEggName(selectedNft.name);
+    return resolveSpeciesByEggName(eggName);
+  }, [selectedNft?.mintAddress]);
 
   const handleScanWallet = useCallback(async (address: string) => {
     setMode("scanning");
@@ -172,6 +199,12 @@ export function PartyScreen({ onSwitch }: { onSwitch?: () => void }) {
           onSwitch?.();
         }
       }
+      // Open explorer for minted monster
+      if ((key.sequence === "e" || key.sequence === "E") && selected?.monster.mintAddress) {
+        const cluster = selected.monster.mintNetwork === "mainnet-beta" ? "" : "?cluster=devnet";
+        const url = `https://explorer.solana.com/address/${selected.monster.mintAddress}${cluster}`;
+        openUrl(url);
+      }
       // Allow changing wallet address with 'w' when on the claim row
       if (isClaimSelected && key.sequence === "w") {
         setClaimResult(null);
@@ -200,15 +233,21 @@ export function PartyScreen({ onSwitch }: { onSwitch?: () => void }) {
         setWalletInput((v) => v + key.sequence);
       }
     } else if (mode === "pick") {
-      const unclaimed = claimableNfts.filter((c) => !c.alreadyClaimed);
       if (key.name === "escape") {
         setMode("list");
       } else if (key.name === "up") {
         setPickIndex((i) => Math.max(0, i - 1));
       } else if (key.name === "down") {
-        setPickIndex((i) => Math.min(unclaimed.length - 1, i + 1));
-      } else if (key.name === "return" && unclaimed[pickIndex]) {
-        handleClaimNft(unclaimed[pickIndex].nft.mintAddress);
+        setPickIndex((i) => Math.min(unclaimedNfts.length - 1, i + 1));
+      } else if (key.name === "left") {
+        setPickIndex((i) => Math.max(0, i - PICK_COL_SIZE));
+      } else if (key.name === "right") {
+        setPickIndex((i) => Math.min(unclaimedNfts.length - 1, i + PICK_COL_SIZE));
+      } else if (key.name === "return" && unclaimedNfts[pickIndex]) {
+        handleClaimNft(unclaimedNfts[pickIndex].nft.mintAddress);
+      } else if ((key.sequence === "e" || key.sequence === "E") && unclaimedNfts[pickIndex]) {
+        const url = `https://explorer.solana.com/address/${unclaimedNfts[pickIndex].nft.mintAddress}?cluster=devnet`;
+        openUrl(url);
       }
     } else if (mode === "result") {
       if (key.name === "return" || key.name === "escape") {
@@ -293,8 +332,15 @@ export function PartyScreen({ onSwitch }: { onSwitch?: () => void }) {
         <box flexGrow={1} flexDirection="column">
           {/* 3D Preview */}
           <box flexGrow={1}>
-            {selected ? (
+            {mode === "pick" && selectedNftSpecies ? (
               <RegistryPreview
+                key={selectedNft?.mintAddress ?? "pick"}
+                species={selectedNftSpecies}
+                formIndex={0}
+              />
+            ) : selected ? (
+              <RegistryPreview
+                key={selected.monster.id}
                 species={selected.species}
                 formIndex={selected.formIndex}
                 locked={false}
@@ -313,7 +359,7 @@ export function PartyScreen({ onSwitch }: { onSwitch?: () => void }) {
 
           {/* Detail panel */}
           <box
-            height={24}
+            height={12}
             flexDirection="column"
             borderStyle="rounded"
             border
@@ -344,7 +390,7 @@ export function PartyScreen({ onSwitch }: { onSwitch?: () => void }) {
             ) : mode === "result" && claimResult ? (
               <ClaimResultPanel result={claimResult} />
             ) : selected ? (
-              <MonsterDetail entry={selected} isActive={selected.monster.id === activeMonster?.id} qrCode={qrCode} />
+              <MonsterDetail entry={selected} isActive={selected.monster.id === activeMonster?.id} />
             ) : isClaimSelected ? (
               <box flexDirection="column">
                 <text fg={t.text.primary}>Claim Egg</text>
@@ -389,26 +435,56 @@ function NftPickPanel({ nfts, pickIndex }: { nfts: ClaimableNft[]; pickIndex: nu
   const unclaimed = nfts.filter((c) => !c.alreadyClaimed);
   const claimedCount = nfts.length - unclaimed.length;
 
+  // Arrange NFTs in columns
+  const columns: ClaimableNft[][] = [];
+  for (let i = 0; i < unclaimed.length; i += PICK_COL_SIZE) {
+    columns.push(unclaimed.slice(i, i + PICK_COL_SIZE));
+  }
+
+  const selectedNft = unclaimed[pickIndex]?.nft ?? null;
+
   return (
     <box flexDirection="column">
-      <text fg={t.text.primary}>
-        Found {nfts.length} NFT{nfts.length !== 1 ? "s" : ""}
-        {claimedCount > 0 && <span fg={t.text.dim}> ({claimedCount} already claimed)</span>}
-      </text>
+      <box flexDirection="row" justifyContent="space-between">
+        <text fg={t.text.primary}>
+          <strong>Claim an egg</strong>
+          <span fg={t.text.dim}>  {unclaimed.length} unclaimed</span>
+          {claimedCount > 0 && <span fg={t.text.dim}> ({claimedCount} already claimed)</span>}
+        </text>
+        {selectedNft && (
+          <text fg={t.text.dim}>
+            {selectedNft.mintAddress.slice(0, 4)}...{selectedNft.mintAddress.slice(-4)}
+          </text>
+        )}
+      </box>
       <box height={1} />
       {unclaimed.length === 0 ? (
         <text fg={t.text.dim}>All NFTs already claimed. [Esc] to go back</text>
       ) : (
         <>
-          {unclaimed.map((c, i) => (
-            <box key={c.nft.mintAddress} paddingX={0} height={1}>
-              <text fg={i === pickIndex ? t.accent.primary : t.text.muted}>
-                {i === pickIndex ? "> " : "  "}{c.nft.name}
-              </text>
-            </box>
-          ))}
-          <box height={1} />
-          <text fg={t.text.dim}>[Enter] claim  [Esc] cancel</text>
+          <box flexDirection="row">
+            {columns.map((col, ci) => (
+              <box key={ci} flexDirection="column" width={30}>
+                {col.map((c, ri) => {
+                  const globalIdx = ci * PICK_COL_SIZE + ri;
+                  const isSel = globalIdx === pickIndex;
+                  const eggName = extractEggName(c.nft.name);
+                  const sp = resolveSpeciesByEggName(eggName);
+                  return (
+                    <box key={c.nft.mintAddress} height={1}>
+                      <text fg={isSel ? t.accent.primary : t.text.muted}>
+                        {isSel ? "> " : "  "}
+                        {c.nft.name}
+                        {sp && <span fg={getRarityColor(sp.rarity)}> {sp.rarity}</span>}
+                      </text>
+                    </box>
+                  );
+                })}
+              </box>
+            ))}
+          </box>
+          <box flexGrow={1} />
+          <text fg={t.text.dim}>[Enter] claim  [E] explorer  [Esc] cancel</text>
         </>
       )}
     </box>
@@ -427,44 +503,37 @@ function ClaimResultPanel({ result }: { result: { ok: boolean; message: string }
   );
 }
 
-function MonsterDetail({ entry, isActive, qrCode }: { entry: PartyEntry; isActive: boolean; qrCode: string | null }) {
+function MonsterDetail({ entry, isActive }: { entry: PartyEntry; isActive: boolean }) {
   const form = getCurrentForm(entry.species, entry.monster.stage);
   const created = new Date(entry.monster.createdAt);
   const dateStr = created.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
   return (
-    <box flexDirection="row">
-      {/* Left: text info */}
-      <box flexDirection="column" flexGrow={1}>
-        <text>
-          <strong fg={t.text.primary}>{entry.formName}</strong>
-          {"  "}
-          <span fg={t.accent.primary}>Lv.{entry.level}</span>
-          {isActive && <span fg={t.accent.primary}> [Active]</span>}
-        </text>
-        <text fg={t.text.muted}>
-          {form?.description ?? ""}
-        </text>
-        <box height={1} />
-        <text fg={t.text.dim}>
-          {STAGE_LABELS[entry.monster.stage]} stage  |  Origin: {entry.monster.origin}  |  {dateStr}
-        </text>
-        {entry.monster.name && (
-          <text fg={t.text.dim}>Name: {entry.monster.name}</text>
-        )}
-        {entry.monster.mintAddress && (
-          <text fg={t.text.dim}>Mint: {entry.monster.mintAddress.slice(0, 8)}...{entry.monster.mintAddress.slice(-4)}</text>
-        )}
-        {!isActive && (
-          <text fg={t.text.dim}>[Enter] to make active</text>
-        )}
-      </box>
-      {/* Right: QR code for minted monsters */}
-      {qrCode && (
-        <box flexDirection="column" alignItems="flex-end" justifyContent="center" width={41}>
-          <text fg={t.accent.primary} backgroundColor="#ffffff">{" " + qrCode.split("\n").join(" \n ") + " "}</text>
-        </box>
+    <box flexDirection="column">
+      <text>
+        <strong fg={t.text.primary}>{entry.formName}</strong>
+        {"  "}
+        <span fg={t.accent.primary}>Lv.{entry.level}</span>
+        {isActive && <span fg={t.accent.primary}> [Active]</span>}
+      </text>
+      <text fg={t.text.muted}>
+        {form?.description ?? ""}
+      </text>
+      <box height={1} />
+      <text fg={t.text.dim}>
+        {STAGE_LABELS[entry.monster.stage]} stage  |  Origin: {entry.monster.origin}  |  {dateStr}
+      </text>
+      {entry.monster.name && (
+        <text fg={t.text.dim}>Name: {entry.monster.name}</text>
       )}
+      {entry.monster.mintAddress && (
+        <text fg={t.text.dim}>Mint: {entry.monster.mintAddress.slice(0, 8)}...{entry.monster.mintAddress.slice(-4)}</text>
+      )}
+      <box flexGrow={1} />
+      <text fg={t.text.dim}>
+        {!isActive ? "[Enter] make active" : ""}
+        {entry.monster.mintAddress ? "  [E] explorer" : ""}
+      </text>
     </box>
   );
 }
