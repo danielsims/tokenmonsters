@@ -5,7 +5,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import dynamic from "next/dynamic";
-import { SPECIES, formatPrice, getRarityColor } from "@/lib/species";
+import { SPECIES, RARITY_TIERS, formatPrice, getPrice, getRarityColor } from "@/lib/species";
 import { mintEggNft, generateGenomeHex } from "@/lib/mint";
 
 const EggViewer = dynamic(() => import("@/components/EggViewer"), { ssr: false });
@@ -26,6 +26,16 @@ export default function Home() {
     }
     return 0;
   });
+  const [tierIdx, setTierIdx] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const params = new URLSearchParams(window.location.search);
+    const rarity = params.get("rarity");
+    if (rarity) {
+      const idx = RARITY_TIERS.findIndex((t) => t.name === rarity);
+      if (idx >= 0) return idx;
+    }
+    return 0;
+  });
   const [mintState, setMintState] = useState<MintState>("idle");
   const [mintAddress, setMintAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +44,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   const species = SPECIES[speciesIdx];
+  const tier = RARITY_TIERS[tierIdx];
   const touchStart = useRef<number | null>(null);
 
   const installCommand = "npx tokenmonsters";
@@ -73,7 +84,6 @@ export default function Home() {
       if (touchStart.current === null) return;
       const dx = Math.abs(e.touches[0].clientX - touchStart.current);
       const dy = Math.abs(e.touches[0].clientY - (touchStartY.current ?? 0));
-      // If horizontal movement dominates, it's a swipe — prevent scroll
       if (dx > 10 && dx > dy) {
         swiping.current = true;
         e.preventDefault();
@@ -120,6 +130,10 @@ export default function Home() {
         prevSpecies();
       } else if (e.key === "ArrowRight" || e.key === "l") {
         nextSpecies();
+      } else if (e.key === "ArrowUp") {
+        setTierIdx((i) => Math.min(RARITY_TIERS.length - 1, i + 1));
+      } else if (e.key === "ArrowDown") {
+        setTierIdx((i) => Math.max(0, i - 1));
       } else if (e.key === "Enter") {
         if (!connected) {
           openWalletModal(true);
@@ -163,9 +177,9 @@ export default function Home() {
         rpcEndpoint: connection.rpcEndpoint,
         name: nftName,
         speciesName: species.name,
-        rarity: species.rarity,
+        rarity: tier.name,
         genomeHex,
-        priceLamports: species.priceLamports,
+        priceLamports: getPrice(tier, species.id),
       });
 
       setMintAddress(result.mintAddress);
@@ -177,7 +191,7 @@ export default function Home() {
     }
   }
 
-  const canAfford = balance !== null && balance * LAMPORTS_PER_SOL >= species.priceLamports;
+  const canAfford = balance !== null && balance * LAMPORTS_PER_SOL >= getPrice(tier, species.id);
   const needsAirdrop = connected && balance !== null && balance < 0.05;
 
   return (
@@ -209,8 +223,8 @@ export default function Home() {
 
           {/* Species info */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between flex-nowrap">
+              <div className="flex items-center gap-3 shrink-0">
                 <button
                   onClick={prevSpecies}
                   className="text-zinc-600 hover:text-zinc-300 transition-colors"
@@ -225,9 +239,15 @@ export default function Home() {
                   ►
                 </button>
               </div>
-              <span className="text-sm font-medium" style={{ color: getRarityColor(species.rarity) }}>
-                {species.rarity}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-sm font-medium" style={{ color: tier.color }}>
+                  {tier.name}
+                </span>
+                <span className="text-zinc-600 text-xs whitespace-nowrap">
+                  {formatPrice(getPrice(tier, species.id))}
+                  {tier.supply && ` · ${tier.supply}/species`}
+                </span>
+              </div>
             </div>
             <p className="text-zinc-500 text-sm leading-relaxed">
               {species.description}
@@ -242,7 +262,6 @@ export default function Home() {
             <button
               onClick={() => {
                 if (wallet) {
-                  // Wallet previously selected — connect directly (handles mobile deep linking)
                   connect().catch(() => openWalletModal(true));
                 } else {
                   openWalletModal(true);
@@ -250,13 +269,13 @@ export default function Home() {
               }}
               className="w-full py-2.5 bg-zinc-800 border border-zinc-600 text-zinc-200 rounded hover:bg-zinc-700 hover:border-zinc-500 transition-colors text-sm font-mono"
             >
-              ⏎ Mint — {formatPrice(species.priceLamports)}
+              ⏎ Mint — {formatPrice(getPrice(tier, species.id))}
             </button>
           ) : mintState === "success" && mintAddress ? (
             <div className="space-y-4">
               <div className="text-center space-y-1">
-                <p className="text-green-400 text-base font-medium font-sans">
-                  Egg minted
+                <p className="text-base font-medium font-sans" style={{ color: tier.color }}>
+                  {tier.name} egg minted
                 </p>
                 <p className="text-zinc-500 text-sm font-sans">
                   Claim it in-game to start hatching.
@@ -307,10 +326,10 @@ export default function Home() {
               ) : (
                 <button
                   onClick={handleMint}
-                  disabled={!canAfford && species.priceLamports > 0}
+                  disabled={!canAfford && getPrice(tier, species.id) > 0}
                   className="w-full py-2.5 bg-zinc-800 border border-zinc-600 text-zinc-200 rounded hover:bg-zinc-700 hover:border-zinc-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-mono"
                 >
-                  ⏎ Mint — {formatPrice(species.priceLamports)}
+                  ⏎ Mint — {formatPrice(getPrice(tier, species.id))}
                 </button>
               )}
 
@@ -332,7 +351,11 @@ export default function Home() {
 
           {/* Status bar */}
           <div className="flex items-center justify-between text-xs text-zinc-600 pt-2 border-t border-zinc-800 font-mono">
-            <span className="hidden sm:inline">← → browse  ⏎ {connected ? "Mint" : "connect"}</span>
+            <span className="hidden sm:inline-flex gap-4">
+              <span>← → species</span>
+              <span>↑ ↓ <span className="text-blue-400">rarity</span></span>
+              <span>⏎ <span className="text-purple-400">{connected ? "mint" : "connect"}</span></span>
+            </span>
             <span className="sm:hidden">swipe to browse</span>
             <span>
               {connected

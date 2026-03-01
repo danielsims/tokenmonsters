@@ -3,9 +3,29 @@ export interface Species {
   name: string;
   eggName: string;
   description: string;
-  rarity: "common" | "uncommon" | "rare";
   model: string | null; // GLB filename in /models/
-  priceLamports: number; // 0 = free
+}
+
+export interface RarityTier {
+  name: string;
+  color: string;
+  priceLamports: number;
+  supply: number | null; // null = unlimited
+}
+
+export const RARITY_TIERS: RarityTier[] = [
+  { name: "common", color: "#a1a1aa", priceLamports: 200_000_000, supply: null },
+  { name: "rare", color: "#c084fc", priceLamports: 1_000_000_000, supply: 1000 },
+  { name: "legendary", color: "#4ade80", priceLamports: 5_000_000_000, supply: 500 },
+  { name: "founder", color: "#60a5fa", priceLamports: 20_000_000_000, supply: 100 },
+];
+
+const PINCHY_SPECIES_ID = 1;
+
+/** Get effective price — Pinchy common is free, everything else follows tier pricing */
+export function getPrice(tier: RarityTier, speciesId: number): number {
+  if (tier.name === "common" && speciesId === PINCHY_SPECIES_ID) return 0;
+  return tier.priceLamports;
 }
 
 /** Available species for minting — only those with egg models */
@@ -15,36 +35,28 @@ export const SPECIES: Species[] = [
     name: "Pinchy",
     eggName: "Molting Egg",
     description: "An open-source crustacean that grows by molting its shell. Each molt reveals harder armour underneath.",
-    rarity: "common",
     model: "molting-egg.glb",
-    priceLamports: 0,
   },
   {
     id: 2,
     name: "Bytepup",
     eggName: "Jagged Egg",
     description: "A scrappy digital predator that feeds on stray tokens. Quick to hatch, slow to evolve.",
-    rarity: "common",
     model: "jagged-egg.glb",
-    priceLamports: 0,
   },
   {
     id: 6,
     name: "Qwerty",
     eggName: "Keycap Egg",
     description: "A mischievous creature that materialises from rapid keystrokes. Patient and quiet at first.",
-    rarity: "rare",
     model: "keycap-egg.glb",
-    priceLamports: 1_000_000_000,
   },
   {
     id: 7,
     name: "Megabyte",
     eggName: "Dense Egg",
     description: "A compact data creature that doubles in density as it grows. Small but deceptively heavy.",
-    rarity: "rare",
     model: "dense-egg.glb",
-    priceLamports: 1_000_000_000,
   },
 ];
 
@@ -56,8 +68,9 @@ export function formatPrice(lamports: number): string {
 export function getRarityColor(rarity: string): string {
   switch (rarity) {
     case "common": return "#a1a1aa";
-    case "uncommon": return "#4ade80";
     case "rare": return "#c084fc";
+    case "legendary": return "#4ade80";
+    case "founder": return "#60a5fa";
     default: return "#a1a1aa";
   }
 }
