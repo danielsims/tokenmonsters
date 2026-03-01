@@ -13,7 +13,7 @@ import { PartyScreen } from "./ui/screens/PartyScreen";
 import { getSetting, setSetting } from "./db/queries";
 import { cycleTheme, setTheme, getThemeName } from "./ui/theme";
 
-type Screen = "welcome" | "home" | "info" | "hatch" | "evolve" | "registry" | "party";
+type Screen = "welcome" | "home" | "info" | "hatch" | "evolve" | "registry" | "party" | "mint";
 
 function AppInner() {
   const renderer = useRenderer();
@@ -67,7 +67,7 @@ function AppInner() {
       return;
     }
 
-    if (screen === "welcome" || screen === "hatch" || screen === "evolve") return;
+    if (screen === "welcome" || screen === "hatch" || screen === "evolve" || screen === "mint") return;
 
     if (key.name === "i" || key.name === "tab") {
       setScreen((s) => (s === "info" ? "home" : "info"));
@@ -79,6 +79,10 @@ function AppInner() {
 
     if (key.name === "p") {
       setScreen((s) => (s === "party" ? "home" : "party"));
+    }
+
+    if (key.name === "c") {
+      setScreen((s) => (s === "mint" ? "home" : "mint"));
     }
 
     if (key.name === "m") {
@@ -109,6 +113,8 @@ function AppInner() {
       return <RegistryScreen />;
     case "party":
       return <PartyScreen onSwitch={() => setScreen("home")} />;
+    case "mint":
+      return <OnboardingScreen onComplete={() => setScreen("home")} mode="mint" />;
   }
 }
 
