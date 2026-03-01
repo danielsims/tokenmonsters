@@ -63,7 +63,7 @@ describe("buildMetadata", () => {
 
     expect(meta.name).toBe("Molting Egg #a3f8");
     expect(meta.symbol).toBe("TMON");
-    expect(meta.description).toBe("A tokenmon creature raised on AI tokens.");
+    expect(meta.description).toBe("A Token Monsters creature raised on AI tokens.");
     expect(meta.attributes).toHaveLength(5);
     expect(meta.properties.creators).toHaveLength(1);
     expect(meta.properties.creators[0].share).toBe(100);

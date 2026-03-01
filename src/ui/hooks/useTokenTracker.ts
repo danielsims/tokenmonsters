@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { TokenEvent } from "../../tracking/types";
 
-const SOCKET_PATH = process.env.TOKENMON_SOCKET ?? "/tmp/tokenmon.sock";
+const SOCKET_PATH = process.env.TOKENMONSTERS_SOCKET ?? "/tmp/tokenmonsters.sock";
 const POLL_INTERVAL = 3_000;
 
 async function fetchFromDaemon(path: string): Promise<any | null> {

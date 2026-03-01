@@ -1,5 +1,5 @@
 {
-  "name": "tokenmon",
+  "name": "tokenmonsters",
   "version": "0.1.0",
   "description": "Your AI tokens are feeding something.",
   "type": "module",
@@ -9,21 +9,21 @@
     "bun": ">=1.0.0"
   },
   "bin": {
-    "tokenmon": "./bin/tokenmon"
+    "tokenmonsters": "./bin/tokenmonsters"
   },
   "files": [
-    "bin/tokenmon",
+    "bin/tokenmonsters",
     "src",
     "!src/three/glb-loader-debug.log",
     "daemon",
     "scripts",
     "tsconfig.json",
-    "tokenmon.png"
+    "tokenmonsters.png"
   ],
   "scripts": {
     "postinstall": "node scripts/postinstall.cjs",
-    "tokenmon": "./bin/tokenmon",
-    "start": "./bin/tokenmon",
+    "tokenmonsters": "./bin/tokenmonsters",
+    "start": "./bin/tokenmonsters",
     "dev": "bun --watch run src/index.tsx",
     "daemon": "bun run daemon/index.ts",
     "test": "bun test",

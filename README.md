@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="tokenmon.png" alt="tokenmon" width="700" />
+  <img src="tokenmonsters.png" alt="tokenmonsters" width="700" />
 </p>
 
 Your AI tokens are feeding something.

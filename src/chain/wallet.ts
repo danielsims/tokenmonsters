@@ -5,7 +5,7 @@ import { homedir } from "os";
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "fs";
 import { getChainId, getWalletConnectProjectId } from "./config";
 
-const SESSION_PATH = join(homedir(), ".tokenmon", "wallet-session.json");
+const SESSION_PATH = join(homedir(), ".tokenmonsters", "wallet-session.json");
 const CONNECTION_TIMEOUT_MS = 120_000; // 2 minutes to scan QR
 const SIGN_TIMEOUT_MS = 120_000; // 2 minutes to approve on phone
 
@@ -200,10 +200,10 @@ export function generateQrString(uri: string): Promise<string> {
   });
 }
 
-// --- Session persistence at ~/.tokenmon/wallet-session.json ---
+// --- Session persistence at ~/.tokenmonsters/wallet-session.json ---
 
 function storeSession(session: StoredSession): void {
-  const dir = join(homedir(), ".tokenmon");
+  const dir = join(homedir(), ".tokenmonsters");
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(SESSION_PATH, JSON.stringify(session), { mode: 0o600 });
 }

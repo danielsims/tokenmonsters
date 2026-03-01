@@ -5,7 +5,7 @@ data/
 *.db-journal
 .DS_Store
 .env
-/tmp/tokenmon*.sock
+/tmp/tokenmonsters*.sock
 tools/out/
 /models/
 .claude/

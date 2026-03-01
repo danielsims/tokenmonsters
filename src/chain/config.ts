@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from "fs";
 
 export type Network = "devnet" | "mainnet-beta";
 
-const CONFIG_PATH = join(homedir(), ".tokenmon", "chain-config.json");
+const CONFIG_PATH = join(homedir(), ".tokenmonsters", "chain-config.json");
 
 const RPC_ENDPOINTS: Record<Network, string> = {
   devnet: "https://api.devnet.solana.com",
@@ -30,7 +30,7 @@ interface ChainConfig {
 }
 
 function loadConfig(): ChainConfig {
-  const network = (process.env.TOKENMON_NETWORK as Network) || "devnet";
+  const network = (process.env.TOKENMONSTERS_NETWORK as Network) || "devnet";
   const walletConnectProjectId = process.env.WALLETCONNECT_PROJECT_ID || "";
   const rpcUrl = process.env.SOLANA_RPC_URL || null;
 
@@ -75,7 +75,7 @@ export function getWalletConnectProjectId(): string {
   const id = getConfig().walletConnectProjectId;
   if (!id) {
     throw new Error(
-      "WalletConnect project ID not configured. Set WALLETCONNECT_PROJECT_ID env var or add to ~/.tokenmon/chain-config.json",
+      "WalletConnect project ID not configured. Set WALLETCONNECT_PROJECT_ID env var or add to ~/.tokenmonsters/chain-config.json",
     );
   }
   return id;

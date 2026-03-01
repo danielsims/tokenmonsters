@@ -6,7 +6,7 @@ import type { Monster } from "./types";
 
 function loadOrCreateKey(): string {
   if (process.env.MONSTER_HMAC_KEY) return process.env.MONSTER_HMAC_KEY;
-  const dir = join(homedir(), ".tokenmon");
+  const dir = join(homedir(), ".tokenmonsters");
   const keyPath = join(dir, "hmac.key");
   if (existsSync(keyPath)) return readFileSync(keyPath, "utf-8").trim();
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

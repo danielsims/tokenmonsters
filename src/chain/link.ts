@@ -4,7 +4,7 @@ import { ed25519 } from "@noble/curves/ed25519";
 import bs58 from "bs58";
 
 const LINK_TIMEOUT_MS = 120_000; // 2 minutes to connect wallet
-const WEBSITE_URL = process.env.TOKENMON_WEBSITE_URL || "https://tokenmonsters.vercel.app";
+const WEBSITE_URL = process.env.TOKENMONSTERS_WEBSITE_URL || "https://tokenmonsters.vercel.app";
 
 export interface LinkResult {
   address: string;
@@ -27,7 +27,7 @@ export interface LinkResult {
 export async function linkWallet(opts?: { fresh?: boolean }): Promise<LinkResult> {
   const port = await findFreePort();
   const nonce = randomBytes(16).toString("hex");
-  const challenge = `tokenmon-link:${Date.now()}:${nonce}`;
+  const challenge = `tokenmonsters-link:${Date.now()}:${nonce}`;
 
   let linkUrl = `${WEBSITE_URL}/link?port=${port}&nonce=${encodeURIComponent(challenge)}`;
   if (opts?.fresh) linkUrl += "&fresh=1";

@@ -5,7 +5,7 @@ import { mkdirSync, existsSync } from "fs";
 import { applySchema } from "./schema";
 import { seedSpecies } from "../models/species";
 
-const DATA_DIR = join(homedir(), ".tokenmon");
+const DATA_DIR = join(homedir(), ".tokenmonsters");
 const DB_PATH = join(DATA_DIR, "monsters.db");
 
 let instance: Database | null = null;

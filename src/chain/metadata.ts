@@ -34,7 +34,7 @@ export function buildMetadata(
   return {
     name: buildNftName(monster, species),
     symbol: NFT_SYMBOL,
-    description: "A tokenmon creature raised on AI tokens.",
+    description: "A Token Monsters creature raised on AI tokens.",
     image: "", // Metadata server TBD
     attributes: [
       { trait_type: "Species", value: eggName },
