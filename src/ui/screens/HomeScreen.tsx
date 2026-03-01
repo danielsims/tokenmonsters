@@ -6,7 +6,6 @@ import { TokenTicker } from "../components/TokenTicker";
 import { StatusBar } from "../components/StatusBar";
 import { useGame } from "../../game/context";
 import { getDisplayName } from "../../models/evolution";
-import { generateQrString } from "../../chain/wallet";
 import { t } from "../theme";
 
 /** Below this column count, switch to stacked layout */
@@ -34,27 +33,27 @@ export function HomeScreen() {
   const { cols } = useTerminalSize();
   const compact = cols < COMPACT_BREAKPOINT;
   const narrow = cols < NARROW_BREAKPOINT;
-  const { monster, species, evolutionPending } = useGame();
-  const [qrCode, setQrCode] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!monster?.mintAddress) {
-      setQrCode(null);
-      return;
-    }
-    const cluster = monster.mintNetwork === "mainnet-beta" ? "" : "?cluster=devnet";
-    const url = `https://explorer.solana.com/address/${monster.mintAddress}${cluster}`;
-    generateQrString(url).then(setQrCode);
-  }, [monster?.mintAddress, monster?.mintNetwork]);
+  const { monster, species, evolutionPending, evolutionFromStage } = useGame();
 
   const monsterName = monster && species ? getDisplayName(monster, species) : "Your monster";
+
+  // Use the PREVIOUS form name since monster has already evolved in state
+  const pendingName = (() => {
+    if (!species || !evolutionFromStage) return monsterName;
+    if (evolutionFromStage === "egg") {
+      const eggForm = species.forms.find((f) => f.stage === "egg");
+      return eggForm?.name ?? "Your egg";
+    }
+    const fromForm = species.forms.find((f) => f.stage === evolutionFromStage);
+    return fromForm?.name ?? monsterName;
+  })();
 
   // When evolution is pending (AFK), mask the 3D scene so the evolved form isn't revealed
   const sceneOrOverlay = evolutionPending ? (
     <box flexGrow={1} justifyContent="center" alignItems="center" backgroundColor={t.bg.base}>
       <box flexDirection="column" alignItems="center">
         <text fg={t.accent.primary}>
-          <strong>{monsterName} is evolving!</strong>
+          <strong>{evolutionFromStage === "egg" ? `${pendingName} is hatching!` : `${pendingName} is evolving!`}</strong>
         </text>
         <box height={1} />
         <text fg={t.text.muted}>Press any key to continue...</text>
@@ -145,13 +144,6 @@ export function HomeScreen() {
           <StatsPanel />
           <box height={1} />
           <TokenTicker />
-          {qrCode && (
-            <box flexDirection="column" alignItems="center" paddingTop={1}>
-              <text fg={t.accent.primary} backgroundColor="#ffffff">
-                {" " + qrCode.split("\n").join(" \n ") + " "}
-              </text>
-            </box>
-          )}
         </box>
       </box>
       <StatusBar />

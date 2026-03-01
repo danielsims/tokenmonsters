@@ -4,7 +4,7 @@ import { getLevel } from "../../models/level";
 import { t } from "../theme";
 
 export function Header() {
-  const { monster, species } = useGame();
+  const { monster, species, evolutionPending, isEvolving, evolutionFromStage } = useGame();
 
   if (!monster || !species) {
     return (
@@ -23,9 +23,16 @@ export function Header() {
     );
   }
 
-  const displayName = getDisplayName(monster, species);
+  // During pending/evolving, show the PRE-evolution form (monster already evolved in state)
+  const maskedStage = (evolutionPending || isEvolving) && evolutionFromStage
+    ? evolutionFromStage
+    : monster.stage;
+  const form = getCurrentForm(species, maskedStage);
+  const formName = form?.name ?? maskedStage;
+  const displayName = monster.name
+    ? `${monster.name.charAt(0).toUpperCase() + monster.name.slice(1)} the ${formName}`
+    : formName;
   const level = getLevel(monster.experience);
-  const form = getCurrentForm(species, monster.stage);
 
   return (
     <box
@@ -45,7 +52,7 @@ export function Header() {
       </box>
       <box flexDirection="row" gap={2} alignItems="center">
         <text fg={t.accent.primary}>Lv.{level}</text>
-        <text fg={t.text.secondary}>{form?.name ?? monster.stage}</text>
+        <text fg={t.text.secondary}>{formName}</text>
       </box>
     </box>
   );

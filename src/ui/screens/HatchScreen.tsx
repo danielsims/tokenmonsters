@@ -239,6 +239,8 @@ export function HatchScreen({ onComplete }: { onComplete: () => void }) {
 
   const hatchForm = species ? getCurrentForm(species, toStage) : null;
   const formName = hatchForm?.name ?? "new creature";
+  const eggForm = species?.forms.find((f) => f.stage === "egg") ?? null;
+  const eggName = eggForm?.name ?? "Your egg";
   const dotStr = ".".repeat(dots);
 
   const display = displayRef.current;
@@ -264,18 +266,13 @@ export function HatchScreen({ onComplete }: { onComplete: () => void }) {
       <box height={3} justifyContent="center" alignItems="center">
         {(phase === "show-egg" || phase === "flicker") && (
           <text fg={t.accent.primary}>
-            <strong>Your egg is hatching{dotStr}</strong>
+            <strong>{eggName} is hatching{dotStr}</strong>
           </text>
         )}
         {(phase === "reveal" || phase === "complete") && (
-          <box flexDirection="column" alignItems="center">
-            <text fg={t.accent.green}>
-              <strong>Your egg has hatched!</strong>
-            </text>
-            <text fg={t.text.secondary}>
-              A <strong fg={t.accent.primary}>{formName}</strong> has emerged!
-            </text>
-          </box>
+          <text fg={t.text.secondary}>
+            A <strong fg={t.accent.primary}>{formName}</strong> has emerged!
+          </text>
         )}
       </box>
 

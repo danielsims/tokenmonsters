@@ -50,6 +50,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [evolutionFromStage, setEvolutionFromStage] = useState<Stage | null>(null);
   const [daemonConnected, setDaemonConnected] = useState(false);
   const pendingRef = useRef<PendingEvolution | null>(null);
+  const evolvingRef = useRef(false);
   const [evolutionPending, setEvolutionPending] = useState(false);
 
 
@@ -98,6 +99,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const pending = pendingRef.current;
         pendingRef.current = null;
         setEvolutionPending(false);
+        evolvingRef.current = true;
         setEvolutionFromStage(pending.fromStage);
         setEvolutionTarget(pending.newStage);
         setIsEvolving(true);
@@ -115,6 +117,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const feed = useCallback(
     (source: TokenSource, input: number, output: number, cache: number) => {
       if (!activeId) return;
+      // Block ALL feeding while evolution animation is playing — feedMonster
+      // writes to DB immediately, so if we let it run, the monster silently
+      // evolves through multiple stages causing a loop
+      if (evolvingRef.current || pendingRef.current) return;
+
       const freshMonster = getMonster(activeId);
       const s = freshMonster ? getSpeciesById(freshMonster.speciesId) : null;
       if (!freshMonster || !s) return;
@@ -128,19 +135,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
 
       if (result.evolved && result.newStage) {
-        // Use the stage *before* evolution — feedMonster returns the already-evolved
-        // monster, so we derive fromStage from the target: if we evolved TO hatchling,
-        // we came FROM egg, etc.
-        const stageOrder: Stage[] = ["egg", "hatchling", "prime", "apex"];
-        const toIdx = stageOrder.indexOf(result.newStage);
-        const fromStage = toIdx > 0 ? stageOrder[toIdx - 1] : freshMonster.stage;
+        // freshMonster.stage is the stage BEFORE feedMonster evolved it
+        const fromStage = freshMonster.stage;
         const idle = Date.now() - lastKeystrokeAt > IDLE_THRESHOLD;
         if (idle) {
           // User is AFK — loop alert and queue the evolution screen
           startAlert(30_000);
           pendingRef.current = { newStage: result.newStage, fromStage };
+          setEvolutionFromStage(fromStage);
           setEvolutionPending(true);
         } else {
+          evolvingRef.current = true;
           setEvolutionFromStage(fromStage);
           setEvolutionTarget(result.newStage);
           setIsEvolving(true);
@@ -187,6 +192,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setDaemonConnected,
         setEvolving: (v: boolean) => {
           setIsEvolving(v);
+          evolvingRef.current = v;
           if (!v) {
             setEvolutionFromStage(null);
             setEvolutionTarget(null);

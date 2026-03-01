@@ -239,9 +239,9 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
   );
 
   const toForm = species ? getCurrentForm(species, toStage) : null;
-  const displayName = monster?.name
-    ? monster.name.charAt(0).toUpperCase() + monster.name.slice(1)
-    : (species?.name ?? "Your monster");
+  // Monster has already evolved in state — use fromStage to get the PREVIOUS form name
+  const fromForm = species?.forms.find((f) => f.stage === fromStage) ?? null;
+  const displayName = fromForm?.name ?? "Your monster";
   const toName = toForm?.name ?? "???";
   const dotStr = ".".repeat(dots);
 
@@ -272,14 +272,9 @@ export function EvolveScreen({ onComplete }: { onComplete: () => void }) {
           </text>
         )}
         {(phase === "reveal" || phase === "complete") && (
-          <box flexDirection="column" alignItems="center">
-            <text fg={t.accent.green}>
-              <strong>Evolution complete!</strong>
-            </text>
-            <text fg={t.text.secondary}>
-              {displayName} evolved into <strong fg={t.accent.primary}>{toName}</strong>!
-            </text>
-          </box>
+          <text fg={t.text.secondary}>
+            {displayName} evolved into <strong fg={t.accent.primary}>{toName}</strong>!
+          </text>
         )}
       </box>
 
