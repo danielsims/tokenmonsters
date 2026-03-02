@@ -51,6 +51,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [daemonConnected, setDaemonConnected] = useState(false);
   const pendingRef = useRef<PendingEvolution | null>(null);
   const evolvingRef = useRef(false);
+  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [evolutionPending, setEvolutionPending] = useState(false);
 
 
@@ -192,10 +193,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setDaemonConnected,
         setEvolving: (v: boolean) => {
           setIsEvolving(v);
-          evolvingRef.current = v;
-          if (!v) {
+          if (v) {
+            // Starting evolution — clear any pending cooldown
+            if (cooldownTimer.current) clearTimeout(cooldownTimer.current);
+            evolvingRef.current = true;
+          } else {
+            // Animation done — clear UI state but keep feed guard up
+            // to prevent a chained evolution from immediately re-triggering
             setEvolutionFromStage(null);
             setEvolutionTarget(null);
+            cooldownTimer.current = setTimeout(() => {
+              evolvingRef.current = false;
+            }, 5000);
           }
         },
         reportKeystroke,
