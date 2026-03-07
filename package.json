@@ -30,14 +30,8 @@
     "build": "bun build src/index.tsx --outdir=dist --target=bun"
   },
   "dependencies": {
-    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
-    "@metaplex-foundation/umi": "^1.5.1",
-    "@metaplex-foundation/umi-bundle-defaults": "^1.5.1",
     "@opentui/core": "^0.1.80",
     "@opentui/react": "^0.1.80",
-    "@solana/web3.js": "^1.98.4",
-    "@walletconnect/sign-client": "^2.23.6",
-    "qrcode-terminal": "^0.12.0",
     "react": "^19.0.0",
     "three": "^0.172.0"
   },

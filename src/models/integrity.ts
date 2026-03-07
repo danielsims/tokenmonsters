@@ -35,9 +35,6 @@ function serializeForSigning(monster: Omit<Monster, "checksum" | "tampered">): s
     monster.evolvedAt,
     monster.origin,
     monster.originFrom,
-    monster.mintAddress,
-    monster.mintNetwork,
-    monster.claimedBy,
   ]);
 }
 

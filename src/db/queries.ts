@@ -43,7 +43,7 @@ export function getOwnedSpeciesIds(): Set<number> {
 /** Returns the highest evolution stage reached per species */
 export function getOwnedSpeciesStages(): Map<number, Stage> {
   const db = getDatabase();
-  const rows = db.query("SELECT species_id, stage FROM monsters WHERE mint_address IS NOT NULL").all() as any[];
+  const rows = db.query("SELECT species_id, stage FROM monsters").all() as any[];
   const order: Stage[] = ["egg", "hatchling", "prime", "apex"];
   const map = new Map<number, Stage>();
   for (const row of rows) {
@@ -94,6 +94,20 @@ export function getMonsterCount(): number {
   return result.count;
 }
 
+/** Total XP earned across all monsters */
+export function getTotalXp(): number {
+  const db = getDatabase();
+  const result = db.query("SELECT COALESCE(SUM(experience), 0) as total FROM monsters").get() as { total: number };
+  return result.total;
+}
+
+export const XP_PER_EGG = 100_000_000;
+
+/** How many eggs the player has earned (1 free + 1 per 100M XP) */
+export function getEggSlots(): number {
+  return Math.min(PARTY_MAX, 1 + Math.floor(getTotalXp() / XP_PER_EGG));
+}
+
 export function createMonster(monster: Omit<Monster, "checksum" | "tampered">): Monster | null {
   if (getMonsterCount() >= PARTY_MAX) return null;
   const db = getDatabase();
@@ -101,8 +115,8 @@ export function createMonster(monster: Omit<Monster, "checksum" | "tampered">): 
   const full: Monster = { ...monster, checksum, tampered: false };
 
   db.query(
-    `INSERT INTO monsters (id, name, species_id, genome, stage, hunger, happiness, energy, experience, created_at, hatched_at, last_fed_at, last_interaction_at, evolved_at, checksum, origin, origin_from, mint_address, mint_network, claimed_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO monsters (id, name, species_id, genome, stage, hunger, happiness, energy, experience, created_at, hatched_at, last_fed_at, last_interaction_at, evolved_at, checksum, origin, origin_from)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     full.id,
     full.name,
@@ -120,10 +134,7 @@ export function createMonster(monster: Omit<Monster, "checksum" | "tampered">): 
     full.evolvedAt,
     full.checksum,
     full.origin,
-    full.originFrom,
-    full.mintAddress,
-    full.mintNetwork,
-    full.claimedBy
+    full.originFrom
   );
 
   return full;
@@ -176,30 +187,10 @@ function rowToMonster(row: any): Monster {
     checksum: row.checksum,
     origin: row.origin,
     originFrom: row.origin_from,
-    mintAddress: row.mint_address ?? null,
-    mintNetwork: row.mint_network ?? null,
-    claimedBy: row.claimed_by ?? null,
     tampered: false,
   };
   monster.tampered = !verifyMonster(monster);
   return monster;
-}
-
-export function isAlreadyClaimed(mintAddress: string): boolean {
-  const db = getDatabase();
-  const row = db.query("SELECT 1 FROM monsters WHERE mint_address = ? LIMIT 1").get(mintAddress);
-  return !!row;
-}
-
-export function resolveSpeciesByEggName(eggName: string): Species | null {
-  const all = getAllSpecies();
-  for (const sp of all) {
-    const eggForm = sp.forms.find((f) => f.stage === "egg");
-    if (eggForm && eggForm.name.toLowerCase() === eggName.toLowerCase()) {
-      return sp;
-    }
-  }
-  return null;
 }
 
 // --- Token Feeds ---

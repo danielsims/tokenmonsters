@@ -21,9 +21,6 @@ function makeMockMonster(overrides: Partial<Monster> = {}): Monster {
     checksum: "",
     origin: "generated",
     originFrom: null,
-    mintAddress: null,
-    mintNetwork: null,
-    claimedBy: null,
     tampered: false,
     ...overrides,
   };

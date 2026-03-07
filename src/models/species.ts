@@ -131,15 +131,15 @@ export function getStarterSpecies(): Species[] {
 }
 
 export function getRandomSpecies(): Species {
-  // Weighted by rarity: common 50%, uncommon 35%, rare 15%
+  // Weighted by rarity: common 85%, uncommon 12%, rare 3%
   const roll = Math.random();
   const commons = STARTER_SPECIES.filter((s) => s.rarity === "common");
   const uncommons = STARTER_SPECIES.filter((s) => s.rarity === "uncommon");
   const rares = STARTER_SPECIES.filter((s) => s.rarity === "rare");
 
   let pool: Species[];
-  if (roll < 0.5) pool = commons;
-  else if (roll < 0.85) pool = uncommons;
+  if (roll < 0.85) pool = commons;
+  else if (roll < 0.97) pool = uncommons;
   else pool = rares;
 
   return pool[Math.floor(Math.random() * pool.length)];

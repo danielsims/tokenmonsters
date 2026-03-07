@@ -141,12 +141,41 @@ function applyMigrations(db: Database): void {
         evolvedAt: row.evolved_at,
         origin: row.origin as Origin,
         originFrom: row.origin_from,
-        mintAddress: row.mint_address ?? null,
-        mintNetwork: row.mint_network ?? null,
-        claimedBy: row.claimed_by ?? null,
       });
       update.run(checksum, row.id);
     }
     db.query("INSERT OR REPLACE INTO settings (key, value) VALUES ('checksum_version', '2')").run();
+  }
+
+  // v3: Remove crypto — nullify mint columns, convert 'minted' origin to 'generated', re-sign
+  if (!checksumVersion || Number(checksumVersion.value) < 3) {
+    db.exec("UPDATE monsters SET mint_address = NULL, mint_network = NULL, claimed_by = NULL");
+    db.exec("UPDATE monsters SET origin = 'generated' WHERE origin = 'minted'");
+
+    const monsters = db.query("SELECT * FROM monsters").all() as any[];
+    const update = db.query("UPDATE monsters SET checksum = ? WHERE id = ?");
+    for (const row of monsters) {
+      const genome = Buffer.isBuffer(row.genome) ? row.genome : Buffer.from(row.genome);
+      const checksum = signMonster({
+        id: row.id,
+        name: row.name,
+        speciesId: row.species_id,
+        genome,
+        stage: row.stage as Stage,
+        hunger: row.hunger,
+        happiness: row.happiness,
+        energy: row.energy,
+        experience: row.experience,
+        createdAt: row.created_at,
+        hatchedAt: row.hatched_at,
+        lastFedAt: row.last_fed_at,
+        lastInteractionAt: row.last_interaction_at,
+        evolvedAt: row.evolved_at,
+        origin: (row.origin === "minted" ? "generated" : row.origin) as Origin,
+        originFrom: row.origin_from,
+      });
+      update.run(checksum, row.id);
+    }
+    db.query("INSERT OR REPLACE INTO settings (key, value) VALUES ('checksum_version', '3')").run();
   }
 }

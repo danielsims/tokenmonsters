@@ -13,7 +13,7 @@ import { PartyScreen } from "./ui/screens/PartyScreen";
 import { getSetting, setSetting } from "./db/queries";
 import { cycleTheme, setTheme, getThemeName } from "./ui/theme";
 
-type Screen = "welcome" | "home" | "info" | "hatch" | "evolve" | "registry" | "party" | "mint";
+type Screen = "welcome" | "home" | "info" | "hatch" | "evolve" | "registry" | "party" | "new-egg";
 
 function AppInner() {
   const renderer = useRenderer();
@@ -48,13 +48,9 @@ function AppInner() {
     setScreen("home");
   }, [setEvolving]);
 
-  const handleWelcomeComplete = useCallback(
-    (_name: string) => {
-      // Egg generation + naming handled in OnboardingScreen
-      setScreen("home");
-    },
-    []
-  );
+  const handleWelcomeComplete = useCallback(() => {
+    setScreen("home");
+  }, []);
 
   // Track ALL keypresses for focus-gating (runs on every screen including evolve/hatch)
   useKeyboard(() => {
@@ -67,7 +63,12 @@ function AppInner() {
       return;
     }
 
-    if (screen === "welcome" || screen === "hatch" || screen === "evolve" || screen === "mint") return;
+    if (screen === "welcome" || screen === "hatch" || screen === "evolve" || screen === "new-egg") return;
+
+    if (key.name === "escape" && screen !== "home") {
+      setScreen("home");
+      return;
+    }
 
     if (key.name === "i" || key.name === "tab") {
       setScreen((s) => (s === "info" ? "home" : "info"));
@@ -81,8 +82,8 @@ function AppInner() {
       setScreen((s) => (s === "party" ? "home" : "party"));
     }
 
-    if (key.name === "c") {
-      setScreen((s) => (s === "mint" ? "home" : "mint"));
+    if (key.name === "e") {
+      setScreen((s) => (s === "new-egg" ? "home" : "new-egg"));
     }
 
     if (key.name === "m") {
@@ -113,8 +114,8 @@ function AppInner() {
       return <RegistryScreen />;
     case "party":
       return <PartyScreen onSwitch={() => setScreen("home")} />;
-    case "mint":
-      return <OnboardingScreen onComplete={() => setScreen("home")} mode="mint" />;
+    case "new-egg":
+      return <OnboardingScreen onComplete={() => setScreen("home")} mode="new-egg" />;
   }
 }
 
