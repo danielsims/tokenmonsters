@@ -10,9 +10,7 @@ A terminal creature that lives off your AI coding tool usage. Every token you sp
 npx tokenmonsters
 ```
 
-<p align="center">
-  <img src="tokenmonsters.png" alt="tokenmonsters" width="700" />
-</p>
+![tokenmonsters](tokenmonsters.png)
 
 ## Requirements
 
