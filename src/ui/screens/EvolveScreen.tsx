@@ -8,8 +8,9 @@ import { resolve } from "path";
 import { existsSync } from "fs";
 import type { Species, Stage } from "../../models/types";
 import { t, getSceneBg } from "../theme";
+import { getModelsRoot } from "../../three/models";
 
-const modelsRoot = resolve(import.meta.dir, "../../three/models");
+const modelsRoot = getModelsRoot();
 
 type Phase = "show-from" | "flicker" | "reveal" | "complete";
 

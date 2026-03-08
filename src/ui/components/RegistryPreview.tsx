@@ -5,8 +5,9 @@ import { resolve } from "path";
 import { existsSync } from "fs";
 import type { Species } from "../../models/types";
 import { t, getSceneBg } from "../theme";
+import { getModelsRoot } from "../../three/models";
 
-const modelsRoot = resolve(import.meta.dir, "../../three/models");
+const modelsRoot = getModelsRoot();
 
 interface SpeciesConfig {
   background?: number;

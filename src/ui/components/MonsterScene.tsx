@@ -6,14 +6,9 @@ import { resolve } from "path";
 import { existsSync } from "fs";
 import type { Species, Stage } from "../../models/types";
 import { t, getSceneBg } from "../theme";
+import { getModelsRoot } from "../../three/models";
 
-/**
- * Model directory layout:
- *   src/three/models/<formName>.glb
- *
- * Form names come from species.ts (lowercased, spaces to dashes).
- */
-const modelsRoot = resolve(import.meta.dir, "../../three/models");
+const modelsRoot = getModelsRoot();
 
 interface SpeciesConfig {
   background?: number;

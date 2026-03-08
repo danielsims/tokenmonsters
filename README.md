@@ -9,7 +9,7 @@ A terminal creature that lives off your AI coding tool usage. Every token you sp
 ## Quick Start
 
 ```bash
-npx tokenmon
+npx tokenmonsters
 ```
 
 ## Requirements
@@ -17,7 +17,7 @@ npx tokenmon
 - [Bun](https://bun.sh) runtime — `curl -fsSL https://bun.sh/install | bash`
 - GPU-accelerated terminal: [Ghostty](https://ghostty.org), [Alacritty](https://alacritty.org), [Kitty](https://sw.kovidgoyal.net/kitty/), or [WezTerm](https://wezfurlong.org/wezterm/)
 
-If you have Ghostty installed, tokenmon will auto-launch in it. Otherwise, run from a supported terminal directly.
+If you have Ghostty installed, tokenmonsters will auto-launch in it. Otherwise, run from a supported terminal directly.
 
 ## Supported AI Tools
 
@@ -27,12 +27,13 @@ Token usage is automatically detected from:
 - **Codex CLI** (OpenAI)
 - **OpenCode**
 
-Just use your AI tools as normal. tokenmon watches for token activity in the background.
+Just use your AI tools as normal. tokenmonsters watches for token activity in the background.
 
 ## Controls
 
 | Key | Action |
 |-----|--------|
+| `e` | New egg |
 | `p` | Party — switch active monster |
 | `r` | Registry — species index |
 | `i` / `tab` | Info screen |
@@ -42,7 +43,7 @@ Just use your AI tools as normal. tokenmon watches for token activity in the bac
 
 ## How It Works
 
-1. Install and run `tokemon`
+1. Install and run `tokenmonsters`
 2. Your first egg is generated automatically
 3. Use any supported AI coding tool — tokens feed your monster
 4. Monsters hatch, evolve, and grow through stages: egg, hatchling, prime, apex

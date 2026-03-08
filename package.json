@@ -15,6 +15,7 @@
     "bin/tokenmonsters",
     "src",
     "!src/three/glb-loader-debug.log",
+    "!src/three/models/*.glb",
     "daemon",
     "scripts",
     "tsconfig.json",
