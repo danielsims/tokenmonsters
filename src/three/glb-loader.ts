@@ -229,19 +229,25 @@ export interface GLBSceneResult {
 
 /** Dispose all geometries, materials, and textures in a scene */
 export function disposeScene(scene: THREE.Scene): void {
-  if (scene.background instanceof THREE.Texture) {
-    scene.background.dispose();
-  }
+  try {
+    if (scene.background instanceof THREE.Texture) {
+      scene.background.dispose();
+    }
+  } catch {}
   scene.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
+    if (!(child instanceof THREE.Mesh)) return;
+    try {
       child.geometry?.dispose();
-      const materials = Array.isArray(child.material) ? child.material : [child.material];
-      for (const mat of materials) {
+    } catch {}
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    for (const mat of materials) {
+      if (!mat) continue;
+      try {
         if (mat.map) mat.map.dispose();
         if ((mat as any).normalMap) (mat as any).normalMap.dispose();
         if ((mat as any).emissiveMap) (mat as any).emissiveMap.dispose();
         mat.dispose();
-      }
+      } catch {}
     }
   });
 }
