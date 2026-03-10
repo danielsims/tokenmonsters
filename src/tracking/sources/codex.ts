@@ -80,8 +80,13 @@ function parseNewLines(filePath: string): { input: number; output: number; cache
   try {
     const stat = statSync(filePath);
     const currentSize = stat.size;
-    // New files: read from start — short sessions may complete between polls
-    const lastSize = fileSizes.get(filePath) ?? 0;
+    const lastSize = fileSizes.get(filePath);
+
+    if (lastSize === undefined) {
+      // First time seeing this file — snapshot size, don't extract
+      fileSizes.set(filePath, currentSize);
+      return results;
+    }
 
     if (currentSize <= lastSize) {
       fileSizes.set(filePath, currentSize);
