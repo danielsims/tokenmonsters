@@ -2,7 +2,7 @@ import { useMemo, useEffect, useState } from "react";
 import { useKeyboard } from "@opentui/react";
 import { useMonster } from "../hooks/useMonster";
 import { getSpeciesById, setSetting, getMonsterCount, getEggSlots, getTotalXp, XP_PER_EGG } from "../../db/queries";
-import { getStarterSpecies, getRandomSpecies } from "../../models/species";
+import { getStarterSpecies, getRandomSpecies, MODELED_SPECIES_IDS } from "../../models/species";
 import { RegistryPreview } from "../components/RegistryPreview";
 import { t, setTheme } from "../theme";
 
@@ -29,8 +29,6 @@ function formatXp(xp: number): string {
   return String(xp);
 }
 
-const MODELED_SPECIES_IDS = [1, 2, 6, 7];
-
 interface OnboardingProps {
   onComplete: () => void;
   mode?: "welcome" | "new-egg";
@@ -52,11 +50,7 @@ export function OnboardingScreen({ onComplete, mode = "welcome" }: OnboardingPro
   // For new-egg mode when unlocked, auto-pick a random species
   const randomSpecies = useMemo(() => {
     if (mode !== "new-egg" || !canClaim) return null;
-    let species = getRandomSpecies();
-    while (!MODELED_SPECIES_IDS.includes(species.id)) {
-      species = getRandomSpecies();
-    }
-    return species;
+    return getRandomSpecies();
   }, [mode, canClaim]);
 
   const [speciesIndex, setSpeciesIndex] = useState(0);

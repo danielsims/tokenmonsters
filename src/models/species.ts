@@ -130,17 +130,16 @@ export function getStarterSpecies(): Species[] {
   return STARTER_SPECIES;
 }
 
+/** Species IDs that have 3D models */
+export const MODELED_SPECIES_IDS = [1, 2, 6, 7];
+
 export function getRandomSpecies(): Species {
-  // Weighted by rarity: common 85%, uncommon 12%, rare 3%
+  const modeled = STARTER_SPECIES.filter((s) => MODELED_SPECIES_IDS.includes(s.id));
+  // Weighted: common 65%, rare 35% (only 2 of each with models)
   const roll = Math.random();
-  const commons = STARTER_SPECIES.filter((s) => s.rarity === "common");
-  const uncommons = STARTER_SPECIES.filter((s) => s.rarity === "uncommon");
-  const rares = STARTER_SPECIES.filter((s) => s.rarity === "rare");
+  const commons = modeled.filter((s) => s.rarity === "common");
+  const rares = modeled.filter((s) => s.rarity === "rare");
 
-  let pool: Species[];
-  if (roll < 0.85) pool = commons;
-  else if (roll < 0.97) pool = uncommons;
-  else pool = rares;
-
+  const pool = roll < 0.65 ? commons : rares;
   return pool[Math.floor(Math.random() * pool.length)];
 }
