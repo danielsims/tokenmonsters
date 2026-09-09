@@ -133,13 +133,12 @@ export function getStarterSpecies(): Species[] {
 /** Species IDs that have 3D models */
 export const MODELED_SPECIES_IDS = [1, 2, 6, 7];
 
-export function getRandomSpecies(): Species {
-  const modeled = STARTER_SPECIES.filter((s) => MODELED_SPECIES_IDS.includes(s.id));
-  // Weighted: common 65%, rare 35% (only 2 of each with models)
-  const roll = Math.random();
-  const commons = modeled.filter((s) => s.rarity === "common");
-  const rares = modeled.filter((s) => s.rarity === "rare");
+export function getAvailableSpecies(): Species[] {
+  return STARTER_SPECIES.filter((s) => MODELED_SPECIES_IDS.includes(s.id));
+}
 
-  const pool = roll < 0.65 ? commons : rares;
-  return pool[Math.floor(Math.random() * pool.length)];
+/** Every playable egg has an equal chance; rarity does not bias selection. */
+export function getRandomSpecies(random: () => number = Math.random): Species {
+  const pool = getAvailableSpecies();
+  return pool[Math.floor(random() * pool.length)];
 }

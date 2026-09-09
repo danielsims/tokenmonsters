@@ -2,7 +2,7 @@ import { useMemo, useEffect, useState } from "react";
 import { useKeyboard } from "@opentui/react";
 import { useMonster } from "../hooks/useMonster";
 import { getSpeciesById, setSetting, getMonsterCount, getEggSlots, getTotalXp, XP_PER_EGG } from "../../db/queries";
-import { getStarterSpecies, getRandomSpecies, MODELED_SPECIES_IDS } from "../../models/species";
+import { getAvailableSpecies, getRandomSpecies } from "../../models/species";
 import { RegistryPreview } from "../components/RegistryPreview";
 import { t, setTheme } from "../theme";
 
@@ -37,7 +37,7 @@ interface OnboardingProps {
 export function OnboardingScreen({ onComplete, mode = "welcome" }: OnboardingProps) {
   const { generateSpecificEgg } = useMonster();
   const allSpecies = useMemo(
-    () => getStarterSpecies().filter((s) => MODELED_SPECIES_IDS.includes(s.id)),
+    () => getAvailableSpecies(),
     [],
   );
 
@@ -53,7 +53,10 @@ export function OnboardingScreen({ onComplete, mode = "welcome" }: OnboardingPro
     return getRandomSpecies();
   }, [mode, canClaim]);
 
-  const [speciesIndex, setSpeciesIndex] = useState(0);
+  const [speciesIndex, setSpeciesIndex] = useState(() => {
+    const initialSpecies = getRandomSpecies();
+    return allSpecies.findIndex((species) => species.id === initialSpecies.id);
+  });
   const [confirmed, setConfirmed] = useState(false);
 
   const selectedSpeciesId = mode === "welcome"
